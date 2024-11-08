@@ -1,0 +1,11 @@
+name: RamCore
+version: '1.0.0-SNAPSHOT'
+main: dev.willram.ramcore.RamCore
+api-version: '1.21'
+dependencies:
+  server:
+    ProtocolLib:
+      load: BEFORE
+      required: false
+      # This means that your plugin will not have access to their classpath
+      join-classpath: true
