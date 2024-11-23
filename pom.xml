@@ -21,6 +21,18 @@
         <defaultGoal>clean package</defaultGoal>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <paperweight-mappings-namespace>spigot</paperweight-mappings-namespace>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <version>${kotlin.version}</version>
@@ -114,6 +126,8 @@
                         <includes>
                             <include>org.jetbrains.kotlin</include>
                             <include>org.jetbrains.kotlinx</include>
+                            <include>me.lucko:shadow</include>
+                            <include>me.lucko:shadow-bukkit</include>
                             <include>org.spongepowered:configurate-core</include>
                             <include>org.spongepowered:configurate-hocon</include>
                             <include>com.typesafe:config</include>
@@ -206,6 +220,13 @@
             <groupId>com.flowpowered</groupId>
             <artifactId>flow-math</artifactId>
             <version>1.0.3</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- shadow -->
+        <dependency>
+            <groupId>me.lucko</groupId>
+            <artifactId>shadow-bukkit</artifactId>
+            <version>1.20.1</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

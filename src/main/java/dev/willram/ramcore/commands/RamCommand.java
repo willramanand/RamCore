@@ -32,11 +32,11 @@ public abstract class RamCommand implements BasicCommand {
         this.subCommands = new ArrayList<>();
     }
 
-    public abstract void perform(CommandContext context);
+    public abstract void perform(@NotNull CommandContext context);
 
-    public abstract List<String> tabCompletes(CommandContext context);
+    public abstract List<String> tabCompletes(@NotNull CommandContext context);
 
-    public boolean validCall(CommandContext context) {
+    public boolean validCall(@NotNull CommandContext context) {
         if (!(context.sender() instanceof Player) && playerOnly) {
             context.msg("<red>Only a player can execute this command!");
             return false;
@@ -75,7 +75,7 @@ public abstract class RamCommand implements BasicCommand {
         return true;
     }
 
-    public void executeExt(CommandContext context) {
+    public void executeExt(@NotNull CommandContext context) {
         // Is there a matching sub command?
         if (!context.args().isEmpty()) {
             for (RamCommand subCommand : this.subCommands) {

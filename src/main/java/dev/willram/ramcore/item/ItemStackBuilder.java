@@ -25,8 +25,10 @@ package dev.willram.ramcore.item;
  *  SOFTWARE.
  */
 
-import dev.willram.ramcore.menu.Item;
+import dev.willram.ramcore.menu.*;
+import dev.willram.ramcore.pdc.PDCs;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -38,6 +40,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -87,24 +90,39 @@ public final class ItemStackBuilder {
         }
         return this;
     }
+    public ItemStackBuilder name(Component name) {
+        return transformMeta(meta -> meta.displayName(name.decoration(TextDecoration.ITALIC, false)));
+    }
 
     public ItemStackBuilder name(String name) {
-        return transformMeta(meta -> meta.displayName(MiniMessage.miniMessage().deserialize(name)));
+        return transformMeta(meta -> meta.displayName(MiniMessage.miniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false)));
     }
 
     public ItemStackBuilder lore(String line) {
         return transformMeta(meta -> {
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : meta.lore();
-            lore.add(MiniMessage.miniMessage().deserialize(line));
+            lore.add(MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
         });
     }
 
     public ItemStackBuilder lore(Component... lines) {
         return transformMeta(meta -> {
-            List<Component> lore = meta.lore() == null ? new ArrayList<>() : meta.lore();
-            Collections.addAll(lore, lines);
-            meta.lore(lore);
+            List<Component> newLore = new ArrayList<>();
+            for (Component line : lines) {
+                newLore.add(line.decoration(TextDecoration.ITALIC, false));
+            }
+            meta.lore(newLore);
+        });
+    }
+
+    public ItemStackBuilder lore(String... lines) {
+        return transformMeta(meta -> {
+            List<Component> newLore = new ArrayList<>();
+            for (String line : lines) {
+                newLore.add(MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+            }
+            meta.lore(newLore);
         });
     }
 
@@ -112,7 +130,7 @@ public final class ItemStackBuilder {
         return transformMeta(meta -> {
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : meta.lore();
             for (Component line : lines) {
-                lore.add(line);
+                lore.add(line.decoration(TextDecoration.ITALIC, false));
             }
             meta.lore(lore);
         });
@@ -191,6 +209,9 @@ public final class ItemStackBuilder {
     }
 
     public Item.Builder buildItem() {
+        transformMeta(meta ->
+                PDCs.set(meta, Gui.GUI_ITEM_KEY, PersistentDataType.BOOLEAN, true)
+        );
         return Item.builder(build());
     }
 
