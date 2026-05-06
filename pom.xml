@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.willram</groupId>
@@ -12,18 +13,23 @@
     <name>RamCore</name>
 
     <properties>
+        <!-- For modern Paper/Minecraft plugin compatibility -->
         <java.version>21</java.version>
-        <kotlin.version>2.0.20</kotlin.version>
+
+        <kotlin.version>2.3.20</kotlin.version>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
     </properties>
 
     <build>
         <defaultGoal>clean package</defaultGoal>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifestEntries>
@@ -32,25 +38,34 @@
                     </archive>
                 </configuration>
             </plugin>
+
             <plugin>
-                <artifactId>kotlin-maven-plugin</artifactId>
                 <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
                 <executions>
                     <execution>
-                        <id>compile</id>
+                        <id>kotlin-compile</id>
                         <phase>process-sources</phase>
-                        <goals> <goal>compile</goal> </goals>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
                         <configuration>
+                            <jvmTarget>${java.version}</jvmTarget>
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
+
                     <execution>
-                        <id>test-compile</id>
-                        <goals> <goal>test-compile</goal> </goals>
+                        <id>kotlin-test-compile</id>
+                        <phase>process-test-sources</phase>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
                         <configuration>
+                            <jvmTarget>${java.version}</jvmTarget>
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
                             </sourceDirs>
@@ -58,95 +73,127 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
+
                     <!-- Disable annotation processing for ourselves -->
                     <proc>none</proc>
                 </configuration>
+
+                <!-- Needed when compiling mixed Kotlin + Java projects -->
                 <executions>
                     <execution>
                         <id>default-compile</id>
                         <phase>none</phase>
                     </execution>
+
                     <execution>
                         <id>default-testCompile</id>
                         <phase>none</phase>
                     </execution>
+
                     <execution>
                         <id>java-compile</id>
                         <phase>compile</phase>
-                        <goals> <goal>compile</goal> </goals>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
                     </execution>
+
                     <execution>
                         <id>java-test-compile</id>
                         <phase>test-compile</phase>
-                        <goals> <goal>testCompile</goal> </goals>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
+                        <id>shade</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+
+                        <configuration>
+                            <minimizeJar>false</minimizeJar>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>dev.willram.ramcore.RamCore</Main-Class>
+                                        <paperweight-mappings-namespace>spigot</paperweight-mappings-namespace>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+
+                            <artifactSet>
+                                <includes>
+                                    <include>org.jetbrains.kotlin:kotlin-stdlib</include>
+                                    <include>org.jetbrains.kotlin:kotlin-stdlib-common</include>
+                                    <include>org.jetbrains:annotations</include>
+
+                                    <include>org.jetbrains.kotlinx:*</include>
+
+                                    <include>me.lucko:shadow</include>
+                                    <include>me.lucko:shadow-bukkit</include>
+
+                                    <include>org.spongepowered:configurate-core</include>
+                                    <include>org.spongepowered:configurate-hocon</include>
+
+                                    <include>com.typesafe:config</include>
+                                    <include>com.flowpowered:flow-math</include>
+                                </includes>
+                            </artifactSet>
+
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.spongepowered.configurate</pattern>
+                                    <shadedPattern>dev.willram.ramcore.libs.configurate</shadedPattern>
+                                </relocation>
+
+                                <relocation>
+                                    <pattern>com.typesafe.config</pattern>
+                                    <shadedPattern>dev.willram.ramcore.libs.typesafe.config</shadedPattern>
+                                </relocation>
+
+                                <relocation>
+                                    <pattern>com.flowpowered.math</pattern>
+                                    <shadedPattern>dev.willram.ramcore.libs.flowpowered.math</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <minimizeJar>false</minimizeJar>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
-                    <filters>
-                        <filter>
-                            <artifact>*.*</artifact>
-                            <excludes>
-                                <exclude>module-info.class</exclude>
-                                <exclude>META-INF/MANIFEST.MF</exclude>
-                                <excludes>META-INF/*.RSA</excludes>
-                                <excludes>META-INF/*.SF</excludes>
-                            </excludes>
-                        </filter>
-                    </filters>
-                    <transformers>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <manifestEntries>
-                                <Main-Class>dev.willram.ramcore.RamCore</Main-Class>
-                            </manifestEntries>
-                        </transformer>
-                    </transformers>
-                    <artifactSet>
-                        <includes>
-                            <include>org.jetbrains.kotlin</include>
-                            <include>org.jetbrains.kotlinx</include>
-                            <include>me.lucko:shadow</include>
-                            <include>me.lucko:shadow-bukkit</include>
-                            <include>org.spongepowered:configurate-core</include>
-                            <include>org.spongepowered:configurate-hocon</include>
-                            <include>com.typesafe:config</include>
-                            <include>com.flowpowered:flow-math</include>
-                        </includes>
-                    </artifactSet>
-                    <relocations>
-                        <relocation>
-                            <pattern>org.spongepowered.configurate</pattern>
-                            <shadedPattern>dev.willram.ramcore.configurate</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.typesafe.config</pattern>
-                            <shadedPattern>dev.willram.ramcore.typesafe.config</shadedPattern>
-                        </relocation>
-                    </relocations>
-                </configuration>
             </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -160,17 +207,15 @@
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
+
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
-        </repository>
-        <repository>
-            <id>dmulloy2-repo</id>
-            <url>https://repo.dmulloy2.net/repository/public/</url>
         </repository>
     </repositories>
 
@@ -180,54 +225,64 @@
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit</artifactId>
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.3-R0.1-SNAPSHOT</version>
+            <version>26.1.2.build.60-stable</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
-            <groupId>com.comphenix.protocol</groupId>
+            <groupId>net.dmulloy2</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>5.3.0-SNAPSHOT</version>
+            <version>5.4.0</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>org.spongepowered</groupId>
             <artifactId>configurate-core</artifactId>
-            <version>4.1.2</version>
-            <scope>compile</scope>
+            <version>4.2.0</version>
         </dependency>
+
         <dependency>
             <groupId>org.spongepowered</groupId>
             <artifactId>configurate-hocon</artifactId>
-            <version>4.1.2</version>
-            <scope>compile</scope>
+            <version>4.2.0</version>
         </dependency>
+
         <dependency>
             <groupId>com.typesafe</groupId>
             <artifactId>config</artifactId>
             <version>1.4.1</version>
-            <scope>compile</scope>
         </dependency>
+
         <dependency>
             <groupId>com.flowpowered</groupId>
             <artifactId>flow-math</artifactId>
             <version>1.0.3</version>
-            <scope>compile</scope>
         </dependency>
-        <!-- shadow -->
+
+        <!-- Provides javax.annotation.Nonnull and javax.annotation.Nullable -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.2</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>me.lucko</groupId>
             <artifactId>shadow-bukkit</artifactId>
             <version>1.20.1</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
