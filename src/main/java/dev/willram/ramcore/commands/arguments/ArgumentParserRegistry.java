@@ -30,7 +30,7 @@ import com.google.common.reflect.TypeToken;
 import java.util.Collection;
 import java.util.Optional;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A collection of {@link ArgumentParser}s
@@ -44,8 +44,8 @@ public interface ArgumentParserRegistry {
      * @param <T> the type
      * @return an argument, if one was found
      */
-    @Nonnull
-    <T> Optional<ArgumentParser<T>> find(@Nonnull TypeToken<T> type);
+    @NotNull
+    <T> Optional<ArgumentParser<T>> find(@NotNull TypeToken<T> type);
 
     /**
      * Tries to find an argument parser for the given class
@@ -54,8 +54,8 @@ public interface ArgumentParserRegistry {
      * @param <T> the class type
      * @return an argument, if one was found
      */
-    @Nonnull
-    default <T> Optional<ArgumentParser<T>> find(@Nonnull Class<T> clazz) {
+    @NotNull
+    default <T> Optional<ArgumentParser<T>> find(@NotNull Class<T> clazz) {
         return find(TypeToken.of(clazz));
     }
 
@@ -66,8 +66,8 @@ public interface ArgumentParserRegistry {
      * @param <T> the type
      * @return a collection of argument parsers
      */
-    @Nonnull
-    <T> Collection<ArgumentParser<T>> findAll(@Nonnull TypeToken<T> type);
+    @NotNull
+    <T> Collection<ArgumentParser<T>> findAll(@NotNull TypeToken<T> type);
 
     /**
      * Finds all known parsers for a given class
@@ -76,8 +76,8 @@ public interface ArgumentParserRegistry {
      * @param <T> the class type
      * @return a collection of argument parsers
      */
-    @Nonnull
-    default <T> Collection<ArgumentParser<T>> findAll(@Nonnull Class<T> clazz) {
+    @NotNull
+    default <T> Collection<ArgumentParser<T>> findAll(@NotNull Class<T> clazz) {
         return findAll(TypeToken.of(clazz));
     }
 
@@ -88,7 +88,7 @@ public interface ArgumentParserRegistry {
      * @param parser the parser
      * @param <T> the type
      */
-    <T> void register(@Nonnull TypeToken<T> type, @Nonnull ArgumentParser<T> parser);
+    <T> void register(@NotNull TypeToken<T> type, @NotNull ArgumentParser<T> parser);
 
     /**
      * Registers a new parser with the registry
@@ -97,7 +97,7 @@ public interface ArgumentParserRegistry {
      * @param parser the parser
      * @param <T> the class type
      */
-    default <T> void register(@Nonnull Class<T> clazz, @Nonnull ArgumentParser<T> parser) {
+    default <T> void register(@NotNull Class<T> clazz, @NotNull ArgumentParser<T> parser) {
         register(TypeToken.of(clazz), parser);
     }
 }

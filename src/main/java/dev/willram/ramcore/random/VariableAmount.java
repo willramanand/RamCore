@@ -26,7 +26,7 @@ package dev.willram.ramcore.random;
 
 import com.flowpowered.math.GenericMath;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -43,7 +43,7 @@ public interface VariableAmount {
      * @param value The fixed value
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount fixed(double value) {
         return new Fixed(value);
     }
@@ -56,7 +56,7 @@ public interface VariableAmount {
      * @param max The maximum of the range (exclusive)
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount range(double min, double max) {
         return new BaseAndAddition(min, fixed(max - min));
     }
@@ -70,7 +70,7 @@ public interface VariableAmount {
      * @param variance The variance
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount baseWithVariance(double base, double variance) {
         return new BaseAndVariance(base, fixed(variance));
     }
@@ -84,8 +84,8 @@ public interface VariableAmount {
      * @param variance The variance
      * @return A variable amount representation
      */
-    @Nonnull
-    static VariableAmount baseWithVariance(double base, @Nonnull VariableAmount variance) {
+    @NotNull
+    static VariableAmount baseWithVariance(double base, @NotNull VariableAmount variance) {
         return new BaseAndVariance(base, variance);
     }
 
@@ -98,7 +98,7 @@ public interface VariableAmount {
      * @param addition The additional amount
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount baseWithRandomAddition(double base, double addition) {
         return new BaseAndAddition(base, fixed(addition));
     }
@@ -112,8 +112,8 @@ public interface VariableAmount {
      * @param addition The additional amount
      * @return A variable amount representation
      */
-    @Nonnull
-    static VariableAmount baseWithRandomAddition(double base, @Nonnull VariableAmount addition) {
+    @NotNull
+    static VariableAmount baseWithRandomAddition(double base, @NotNull VariableAmount addition) {
         return new BaseAndAddition(base, addition);
     }
 
@@ -130,7 +130,7 @@ public interface VariableAmount {
      * @param chance The chance to apply the variance
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount baseWithOptionalVariance(double base, double variance, double chance) {
         return new OptionalAmount(base, chance, baseWithVariance(base, variance));
     }
@@ -148,8 +148,8 @@ public interface VariableAmount {
      * @param chance The chance to apply the variance
      * @return A variable amount representation
      */
-    @Nonnull
-    static VariableAmount baseWithOptionalVariance(double base, @Nonnull VariableAmount variance, double chance) {
+    @NotNull
+    static VariableAmount baseWithOptionalVariance(double base, @NotNull VariableAmount variance, double chance) {
         return new OptionalAmount(base, chance, baseWithVariance(base, variance));
     }
 
@@ -167,7 +167,7 @@ public interface VariableAmount {
      * @param chance The chance to apply the additional amount
      * @return A variable amount representation
      */
-    @Nonnull
+    @NotNull
     static VariableAmount baseWithOptionalAddition(double base, double addition, double chance) {
         return new OptionalAmount(base, chance, baseWithRandomAddition(base, addition));
     }
@@ -186,8 +186,8 @@ public interface VariableAmount {
      * @param chance The chance to apply the additional amount
      * @return A variable amount representation
      */
-    @Nonnull
-    static VariableAmount baseWithOptionalAddition(double base, @Nonnull VariableAmount addition, double chance) {
+    @NotNull
+    static VariableAmount baseWithOptionalAddition(double base, @NotNull VariableAmount addition, double chance) {
         return new OptionalAmount(base, chance, baseWithRandomAddition(base, addition));
     }
 
@@ -198,7 +198,7 @@ public interface VariableAmount {
      * @param random The random object
      * @return The amount
      */
-    double getAmount(@Nonnull Random random);
+    double getAmount(@NotNull Random random);
 
     /**
      * Gets an instance of the variable amount using the thread's
@@ -217,7 +217,7 @@ public interface VariableAmount {
      * @param random The random object
      * @return The floored amount
      */
-    default int getFlooredAmount(@Nonnull Random random) {
+    default int getFlooredAmount(@NotNull Random random) {
         return GenericMath.floor(getAmount(random));
     }
 
@@ -243,7 +243,7 @@ public interface VariableAmount {
         }
 
         @Override
-        public double getAmount(@Nonnull Random random) {
+        public double getAmount(@NotNull Random random) {
             return this.amount;
         }
 
@@ -278,13 +278,13 @@ public interface VariableAmount {
         private final double base;
         private final VariableAmount variance;
 
-        private BaseAndVariance(double base, @Nonnull VariableAmount variance) {
+        private BaseAndVariance(double base, @NotNull VariableAmount variance) {
             this.base = base;
             this.variance = variance;
         }
 
         @Override
-        public double getAmount(@Nonnull Random random) {
+        public double getAmount(@NotNull Random random) {
             double var = this.variance.getAmount(random);
             return this.base + random.nextDouble() * var * 2 - var;
         }
@@ -326,7 +326,7 @@ public interface VariableAmount {
         }
 
         @Override
-        public double getAmount(@Nonnull Random random) {
+        public double getAmount(@NotNull Random random) {
             return this.base + (random.nextDouble() * this.addition.getAmount(random));
         }
 
@@ -370,7 +370,7 @@ public interface VariableAmount {
         }
 
         @Override
-        public double getAmount(@Nonnull Random random) {
+        public double getAmount(@NotNull Random random) {
             if (random.nextDouble() < this.chance) {
                 return this.inner.getAmount(random);
             }

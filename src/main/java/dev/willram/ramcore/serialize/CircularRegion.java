@@ -8,7 +8,7 @@ import dev.willram.ramcore.gson.JsonBuilder;
 import dev.willram.ramcore.utils.Maths;
 import org.bukkit.block.Block;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -100,7 +100,7 @@ public class CircularRegion implements GsonSerializable {
      * Get the circumference {@link BlockPosition} of the region
      * @return the {@link BlockPosition}s
      */
-    @Nonnull
+    @NotNull
     public Set<BlockPosition> getOuterBlockPositions() {
         Set<BlockPosition> positions = new HashSet<>((int) getCircumference());
         for (int degree = 0; degree < 360; degree++) {
@@ -114,7 +114,7 @@ public class CircularRegion implements GsonSerializable {
         return Collections.unmodifiableSet(positions);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

@@ -27,7 +27,7 @@ package dev.willram.ramcore.event.filter;
 
 import org.bukkit.event.Cancellable;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.function.Consumer;
 
 /**
@@ -45,7 +45,7 @@ public final class EventHandlers {
      * @param <T> the event type
      * @return a consumer which cancels the event
      */
-    @Nonnull
+    @NotNull
     public static <T extends Cancellable> Consumer<T> cancel() {
         return (Consumer<T>) SET_CANCELLED;
     }
@@ -56,7 +56,7 @@ public final class EventHandlers {
      * @param <T> the event type
      * @return a consumer which un-cancels the event
      */
-    @Nonnull
+    @NotNull
     public static <T extends Cancellable> Consumer<T> uncancel() {
         return (Consumer<T>) UNSET_CANCELLED;
     }

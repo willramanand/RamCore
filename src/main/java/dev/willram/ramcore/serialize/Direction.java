@@ -32,7 +32,7 @@ import dev.willram.ramcore.gson.GsonSerializable;
 import dev.willram.ramcore.gson.JsonBuilder;
 import org.bukkit.Location;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 /**
@@ -79,7 +79,7 @@ public final class Direction implements GsonSerializable {
         return this.pitch;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

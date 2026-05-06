@@ -38,16 +38,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The initial model of a clickable item in a {@link Gui}. Immutable.
  */
 public class Item {
 
-    @Nonnull
-    public static Item.Builder builder(@Nonnull ItemStack itemStack) {
+    @NotNull
+    public static Item.Builder builder(@NotNull ItemStack itemStack) {
         return new Builder(itemStack);
     }
 
@@ -56,7 +56,7 @@ public class Item {
     // the backing itemstack
     private final ItemStack itemStack;
 
-    public Item(@Nonnull Map<ClickType, Consumer<InventoryClickEvent>> handlers, @Nonnull ItemStack itemStack) {
+    public Item(@NotNull Map<ClickType, Consumer<InventoryClickEvent>> handlers, @NotNull ItemStack itemStack) {
         this.handlers = ImmutableMap.copyOf(Objects.requireNonNull(handlers, "handlers"));
         this.itemStack = Objects.requireNonNull(itemStack, "itemStack");
     }
@@ -66,7 +66,7 @@ public class Item {
      *
      * @return the click handlers
      */
-    @Nonnull
+    @NotNull
     public Map<ClickType, Consumer<InventoryClickEvent>> getHandlers() {
         return this.handlers;
     }
@@ -76,7 +76,7 @@ public class Item {
      *
      * @return the backing itemstack
      */
-    @Nonnull
+    @NotNull
     public ItemStack getItemStack() {
         return this.itemStack;
     }
@@ -88,13 +88,13 @@ public class Item {
         private final ItemStack itemStack;
         private final Map<ClickType, Consumer<InventoryClickEvent>> handlers;
 
-        private Builder(@Nonnull ItemStack itemStack) {
+        private Builder(@NotNull ItemStack itemStack) {
             this.itemStack = Objects.requireNonNull(itemStack, "itemStack");
             this.handlers = new HashMap<>();
         }
 
-        @Nonnull
-        public Builder bind(@Nonnull ClickType type, @Nullable Consumer<InventoryClickEvent> handler) {
+        @NotNull
+        public Builder bind(@NotNull ClickType type, @Nullable Consumer<InventoryClickEvent> handler) {
             Objects.requireNonNull(type, "type");
             if (handler != null) {
                 this.handlers.put(type, handler);
@@ -104,8 +104,8 @@ public class Item {
             return this;
         }
 
-        @Nonnull
-        public Builder bind(@Nonnull ClickType type, @Nullable Runnable handler) {
+        @NotNull
+        public Builder bind(@NotNull ClickType type, @Nullable Runnable handler) {
             Objects.requireNonNull(type, "type");
             if (handler != null) {
                 this.handlers.put(type, transformRunnable(handler));
@@ -115,24 +115,24 @@ public class Item {
             return this;
         }
 
-        @Nonnull
-        public Builder bind(@Nullable Consumer<InventoryClickEvent> handler, @Nonnull ClickType... types) {
+        @NotNull
+        public Builder bind(@Nullable Consumer<InventoryClickEvent> handler, @NotNull ClickType... types) {
             for (ClickType type : types) {
                 bind(type, handler);
             }
             return this;
         }
 
-        @Nonnull
-        public Builder bind(@Nullable Runnable handler, @Nonnull ClickType... types) {
+        @NotNull
+        public Builder bind(@Nullable Runnable handler, @NotNull ClickType... types) {
             for (ClickType type : types) {
                 bind(type, handler);
             }
             return this;
         }
 
-        @Nonnull
-        public <T extends Runnable> Builder bindAllRunnables(@Nonnull Iterable<Map.Entry<ClickType, T>> handlers) {
+        @NotNull
+        public <T extends Runnable> Builder bindAllRunnables(@NotNull Iterable<Map.Entry<ClickType, T>> handlers) {
             Objects.requireNonNull(handlers, "handlers");
             for (Map.Entry<ClickType, T> handler : handlers) {
                 bind(handler.getKey(), handler.getValue());
@@ -140,8 +140,8 @@ public class Item {
             return this;
         }
 
-        @Nonnull
-        public <T extends Consumer<InventoryClickEvent>> Builder bindAllConsumers(@Nonnull Iterable<Map.Entry<ClickType, T>> handlers) {
+        @NotNull
+        public <T extends Consumer<InventoryClickEvent>> Builder bindAllConsumers(@NotNull Iterable<Map.Entry<ClickType, T>> handlers) {
             Objects.requireNonNull(handlers, "handlers");
             for (Map.Entry<ClickType, T> handler : handlers) {
                 bind(handler.getKey(), handler.getValue());
@@ -149,14 +149,14 @@ public class Item {
             return this;
         }
 
-        @Nonnull
+        @NotNull
         public Item build() {
             return new Item(this.handlers, this.itemStack);
         }
     }
 
-    @Nonnull
-    public static Consumer<InventoryClickEvent> transformRunnable(@Nonnull Runnable runnable) {
+    @NotNull
+    public static Consumer<InventoryClickEvent> transformRunnable(@NotNull Runnable runnable) {
         return Delegates.runnableToConsumer(runnable);
     }
 }

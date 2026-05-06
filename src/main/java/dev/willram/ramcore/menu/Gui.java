@@ -22,7 +22,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.Inventory;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -101,9 +101,9 @@ public abstract class Gui implements TerminableConsumer {
         return this.initialTitle;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <T extends AutoCloseable> T bind(@Nonnull T terminable) {
+    public <T extends AutoCloseable> T bind(@NotNull T terminable) {
         return this.compositeTerminable.bind(terminable);
     }
 
@@ -128,7 +128,7 @@ public abstract class Gui implements TerminableConsumer {
     public void open() {
         if (MinecraftVersion.getRuntimeVersion().isAfterOrEq(MinecraftVersions.v1_16)) {
             // delay by a tick in 1.16+ to prevent an unwanted PlayerInteractEvent interfering with inventory clicks
-            Schedulers.sync().runLater(() -> {
+            Schedulers.runLater(this.player, () -> {
                 if (!this.player.isOnline()) {
                     return;
                 }

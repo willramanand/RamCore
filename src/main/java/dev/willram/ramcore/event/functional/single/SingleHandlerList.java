@@ -30,21 +30,21 @@ import dev.willram.ramcore.event.functional.FunctionalHandlerList;
 import dev.willram.ramcore.interfaces.Delegates;
 import org.bukkit.event.Event;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface SingleHandlerList<T extends Event> extends FunctionalHandlerList<T, SingleSubscription<T>> {
 
-    @Nonnull
+    @NotNull
     @Override
-    default SingleHandlerList<T> consumer(@Nonnull Consumer<? super T> handler) {
+    default SingleHandlerList<T> consumer(@NotNull Consumer<? super T> handler) {
         Objects.requireNonNull(handler, "handler");
         return biConsumer(Delegates.consumerToBiConsumerSecond(handler));
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    SingleHandlerList<T> biConsumer(@Nonnull BiConsumer<SingleSubscription<T>, ? super T> handler);
+    SingleHandlerList<T> biConsumer(@NotNull BiConsumer<SingleSubscription<T>, ? super T> handler);
 }

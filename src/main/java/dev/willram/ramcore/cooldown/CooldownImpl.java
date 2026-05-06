@@ -28,7 +28,7 @@ package dev.willram.ramcore.cooldown;
 import com.google.gson.JsonElement;
 import dev.willram.ramcore.gson.JsonBuilder;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
@@ -69,7 +69,7 @@ class CooldownImpl implements Cooldown {
         return new CooldownImpl(this.timeout, TimeUnit.MILLISECONDS);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonElement serialize() {
         return JsonBuilder.object()

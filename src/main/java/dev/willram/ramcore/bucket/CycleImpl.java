@@ -27,7 +27,7 @@ package dev.willram.ramcore.bucket;
 
 import com.google.common.collect.ImmutableList;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,7 +48,7 @@ final class CycleImpl<E> implements Cycle<E> {
      */
     private AtomicInteger cursor = new AtomicInteger(0);
 
-    CycleImpl(@Nonnull List<E> objects) {
+    CycleImpl(@NotNull List<E> objects) {
         if (objects == null || objects.isEmpty()) {
             throw new IllegalArgumentException("List of objects cannot be null/empty.");
         }
@@ -74,13 +74,13 @@ final class CycleImpl<E> implements Cycle<E> {
         this.cursor.set(index);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public E current() {
         return this.objects.get(cursor());
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public E next() {
         return this.objects.get(this.cursor.updateAndGet(i -> {
@@ -92,7 +92,7 @@ final class CycleImpl<E> implements Cycle<E> {
         }));
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public E previous() {
         return this.objects.get(this.cursor.updateAndGet(i -> {
@@ -121,19 +121,19 @@ final class CycleImpl<E> implements Cycle<E> {
         return i - 1;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public E peekNext() {
         return this.objects.get(nextPosition());
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public E peekPrevious() {
         return this.objects.get(previousPosition());
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public List<E> getBacking() {
         return this.objects;

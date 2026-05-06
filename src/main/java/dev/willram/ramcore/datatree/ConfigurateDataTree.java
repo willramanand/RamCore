@@ -29,7 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.spongepowered.configurate.ConfigurationNode;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -45,13 +45,13 @@ public class ConfigurateDataTree implements DataTree {
         return this.node;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public ConfigurateDataTree resolve(@Nonnull Object... path) {
+    public ConfigurateDataTree resolve(@NotNull Object... path) {
         return new ConfigurateDataTree(this.node.node(path));
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<Map.Entry<String, ConfigurateDataTree>> asObject() {
         Preconditions.checkState(this.node.childrenMap().isEmpty(), "node does not have map children");
@@ -59,14 +59,14 @@ public class ConfigurateDataTree implements DataTree {
                 .map(entry -> Maps.immutableEntry(entry.getKey().toString(), new ConfigurateDataTree(entry.getValue())));
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<ConfigurateDataTree> asArray() {
         Preconditions.checkState(this.node.childrenList().isEmpty(), "node does not have list children");
         return this.node.childrenList().stream().map(ConfigurateDataTree::new);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<Map.Entry<Integer, ConfigurateDataTree>> asIndexedArray() {
         Preconditions.checkState(this.node.childrenList().isEmpty(), "node does not have list children");
@@ -86,13 +86,13 @@ public class ConfigurateDataTree implements DataTree {
         }, Spliterator.ORDERED | Spliterator.IMMUTABLE), false);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public String asString() {
         return this.node.getString("");
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Number asNumber() {
         return this.node.getDouble(0d);

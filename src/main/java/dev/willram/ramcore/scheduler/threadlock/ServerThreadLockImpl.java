@@ -26,8 +26,7 @@
 package dev.willram.ramcore.scheduler.threadlock;
 
 import dev.willram.ramcore.promise.ThreadContext;
-import dev.willram.ramcore.utils.LoaderUtils;
-import org.bukkit.Bukkit;
+import dev.willram.ramcore.scheduler.Schedulers;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -47,7 +46,7 @@ final class ServerThreadLockImpl implements ServerThreadLock {
         }
 
         // synchronize with the main thread, then countdown
-        Bukkit.getScheduler().scheduleSyncDelayedTask(LoaderUtils.getPlugin(), this::signal);
+        Schedulers.sync().execute(this::signal);
 
         // wait for the main thread to become synchronized
         await();

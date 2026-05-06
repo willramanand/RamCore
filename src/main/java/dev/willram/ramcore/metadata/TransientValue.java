@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.metadata;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a value in a {@link MetadataMap} which will automatically expire at some point.

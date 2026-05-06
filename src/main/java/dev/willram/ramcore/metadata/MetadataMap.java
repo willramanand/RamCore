@@ -27,8 +27,8 @@ package dev.willram.ramcore.metadata;
 
 import com.google.common.collect.ImmutableMap;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -43,7 +43,7 @@ import java.util.function.Supplier;
  */
 public interface MetadataMap {
 
-    @Nonnull
+    @NotNull
     static MetadataMap create() {
         return new MetadataMapImpl();
     }
@@ -59,7 +59,7 @@ public interface MetadataMap {
      * @param <T> the value type
      * @throws ClassCastException if any existing key with the same id has a differing type to the key being add
      */
-    <T> void put(@Nonnull MetadataKey<T> key, @Nonnull T value);
+    <T> void put(@NotNull MetadataKey<T> key, @NotNull T value);
 
     /**
      * Adds a metadata key and corresponding value into this map, removing any previous value if present.
@@ -72,7 +72,7 @@ public interface MetadataMap {
      * @param <T> the value type
      * @throws ClassCastException if any existing key with the same id has a differing type to the key being add
      */
-    <T> void put(@Nonnull MetadataKey<T> key, @Nonnull TransientValue<T> value);
+    <T> void put(@NotNull MetadataKey<T> key, @NotNull TransientValue<T> value);
 
     /**
      * Adds a metadata key and corresponding value into this map, removing any previous value if present.
@@ -83,7 +83,7 @@ public interface MetadataMap {
      * @param value the value to map against (non null)
      * @param <T> the value type
      */
-    <T> void forcePut(@Nonnull MetadataKey<T> key, @Nonnull T value);
+    <T> void forcePut(@NotNull MetadataKey<T> key, @NotNull T value);
 
     /**
      * Adds a metadata key and corresponding value into this map, removing any previous value if present.
@@ -94,7 +94,7 @@ public interface MetadataMap {
      * @param value the value to map against (non null)
      * @param <T> the value type
      */
-    <T> void forcePut(@Nonnull MetadataKey<T> key, @Nonnull TransientValue<T> value);
+    <T> void forcePut(@NotNull MetadataKey<T> key, @NotNull TransientValue<T> value);
 
     /**
      * Adds a metadata key and corresponding value into this map, only if an existing key is not present.
@@ -104,7 +104,7 @@ public interface MetadataMap {
      * @param <T> the value type
      * @return true if there wasn't an existing key, and the key was added
      */
-    <T> boolean putIfAbsent(@Nonnull MetadataKey<T> key, @Nonnull T value);
+    <T> boolean putIfAbsent(@NotNull MetadataKey<T> key, @NotNull T value);
 
     /**
      * Adds a metadata key and corresponding value into this map, only if an existing key is not present.
@@ -114,7 +114,7 @@ public interface MetadataMap {
      * @param <T> the value type
      * @return true if there wasn't an existing key, and the key was added
      */
-    <T> boolean putIfAbsent(@Nonnull MetadataKey<T> key, @Nonnull TransientValue<T> value);
+    <T> boolean putIfAbsent(@NotNull MetadataKey<T> key, @NotNull TransientValue<T> value);
 
     /**
      * Gets an optional value for the given key.
@@ -124,8 +124,8 @@ public interface MetadataMap {
      * @return an optional containing the value
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
-    @Nonnull
-    <T> Optional<T> get(@Nonnull MetadataKey<T> key);
+    @NotNull
+    <T> Optional<T> get(@NotNull MetadataKey<T> key);
 
     /**
      * Attempts to get a value for the given key, and applies the action is present.
@@ -136,7 +136,7 @@ public interface MetadataMap {
      * @return true if the action was applied
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
-    <T> boolean ifPresent(@Nonnull MetadataKey<T> key, @Nonnull Consumer<? super T> action);
+    <T> boolean ifPresent(@NotNull MetadataKey<T> key, @NotNull Consumer<? super T> action);
 
     /**
      * Gets a value for the given key, or null if one isn't present.
@@ -147,7 +147,7 @@ public interface MetadataMap {
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
     @Nullable
-    <T> T getOrNull(@Nonnull MetadataKey<T> key);
+    <T> T getOrNull(@NotNull MetadataKey<T> key);
 
     /**
      * Gets a value for the given key, or returns the default if one isn't present.
@@ -158,8 +158,8 @@ public interface MetadataMap {
      * @return the value, or the default if no key is present.
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
-    @Nonnull
-    <T> T getOrDefault(@Nonnull MetadataKey<T> key, @Nullable T def);
+    @Nullable
+    <T> T getOrDefault(@NotNull MetadataKey<T> key, @Nullable T def);
 
     /**
      * Gets a value for the given key, or puts and returns the default if one isn't present.
@@ -170,8 +170,8 @@ public interface MetadataMap {
      * @return the value, or the supplied value if no key is present.
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
-    @Nonnull
-    <T> T getOrPut(@Nonnull MetadataKey<T> key, @Nonnull Supplier<? extends T> def);
+    @NotNull
+    <T> T getOrPut(@NotNull MetadataKey<T> key, @NotNull Supplier<? extends T> def);
 
     /**
      * Gets a value for the given key, or puts and returns the default if one isn't present.
@@ -182,8 +182,8 @@ public interface MetadataMap {
      * @return the value, or the supplied value if no key is present.
      * @throws ClassCastException if there is a key held in the map with the same id but differing type to the given key.
      */
-    @Nonnull
-    <T> T getOrPutExpiring(@Nonnull MetadataKey<T> key, @Nonnull Supplier<? extends TransientValue<T>> def);
+    @NotNull
+    <T> T getOrPutExpiring(@NotNull MetadataKey<T> key, @NotNull Supplier<? extends TransientValue<T>> def);
 
     /**
      * Returns if this map contains the given key, and the types of each key match.
@@ -191,7 +191,7 @@ public interface MetadataMap {
      * @param key the key to check for
      * @return true if this map contains the key
      */
-    boolean has(@Nonnull MetadataKey<?> key);
+    boolean has(@NotNull MetadataKey<?> key);
 
     /**
      * Removes the given key from this map
@@ -199,7 +199,7 @@ public interface MetadataMap {
      * @param key the key to remove
      * @return true if a value was removed from the map
      */
-    boolean remove(@Nonnull MetadataKey<?> key);
+    boolean remove(@NotNull MetadataKey<?> key);
 
     /**
      * Clears the map
@@ -211,7 +211,7 @@ public interface MetadataMap {
      *
      * @return an immutable view of the backing map
      */
-    @Nonnull
+    @NotNull
     ImmutableMap<MetadataKey<?>, Object> asMap();
 
     /**

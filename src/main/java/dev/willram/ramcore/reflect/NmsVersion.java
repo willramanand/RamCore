@@ -28,8 +28,8 @@ package dev.willram.ramcore.reflect;
 import com.google.common.collect.ImmutableSet;
 import dev.willram.ramcore.utils.Indexing;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.Set;
 
@@ -158,7 +158,7 @@ public enum NmsVersion {
      * @param className the name of the class
      * @return the full class name
      */
-    @Nonnull
+    @NotNull
     public String nms(String className) {
         return this.nmsPrefix + className;
     }
@@ -169,7 +169,7 @@ public enum NmsVersion {
      * @param className the name of the class
      * @return the class represented by the full class name
      */
-    @Nonnull
+    @NotNull
     public Class<?> nmsClass(String className) throws ClassNotFoundException {
         return Class.forName(nms(className));
     }
@@ -180,7 +180,7 @@ public enum NmsVersion {
      * @param className the name of the class
      * @return the full class name
      */
-    @Nonnull
+    @NotNull
     public String obc(String className) {
         return this.obcPrefix + className;
     }
@@ -191,7 +191,7 @@ public enum NmsVersion {
      * @param className the name of the class
      * @return the class represented by the full class name
      */
-    @Nonnull
+    @NotNull
     public Class<?> obcClass(String className) throws ClassNotFoundException {
         return Class.forName(obc(className));
     }

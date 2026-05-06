@@ -33,7 +33,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A functional event listening utility.
@@ -48,8 +48,8 @@ public final class Events {
      * @return a {@link SingleSubscriptionBuilder} to construct the event handler
      * @throws NullPointerException if eventClass is null
      */
-    @Nonnull
-    public static <T extends Event> SingleSubscriptionBuilder<T> subscribe(@Nonnull Class<T> eventClass) {
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> subscribe(@NotNull Class<T> eventClass) {
         return SingleSubscriptionBuilder.newBuilder(eventClass);
     }
 
@@ -62,8 +62,8 @@ public final class Events {
      * @return a {@link SingleSubscriptionBuilder} to construct the event handler
      * @throws NullPointerException if eventClass or priority is null
      */
-    @Nonnull
-    public static <T extends Event> SingleSubscriptionBuilder<T> subscribe(@Nonnull Class<T> eventClass, @Nonnull EventPriority priority) {
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> subscribe(@NotNull Class<T> eventClass, @NotNull EventPriority priority) {
         return SingleSubscriptionBuilder.newBuilder(eventClass, priority);
     }
 
@@ -74,8 +74,8 @@ public final class Events {
      * @param <T>          the super type class
      * @return a {@link MergedSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
-    public static <T> MergedSubscriptionBuilder<T> merge(@Nonnull Class<T> handledClass) {
+    @NotNull
+    public static <T> MergedSubscriptionBuilder<T> merge(@NotNull Class<T> handledClass) {
         return MergedSubscriptionBuilder.newBuilder(handledClass);
     }
 
@@ -86,8 +86,8 @@ public final class Events {
      * @param <T>  the super type class
      * @return a {@link MergedSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
-    public static <T> MergedSubscriptionBuilder<T> merge(@Nonnull TypeToken<T> type) {
+    @NotNull
+    public static <T> MergedSubscriptionBuilder<T> merge(@NotNull TypeToken<T> type) {
         return MergedSubscriptionBuilder.newBuilder(type);
     }
 
@@ -99,9 +99,9 @@ public final class Events {
      * @param <S>          the super class type
      * @return a {@link MergedSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
+    @NotNull
     @SafeVarargs
-    public static <S extends Event> MergedSubscriptionBuilder<S> merge(@Nonnull Class<S> superClass, @Nonnull Class<? extends S>... eventClasses) {
+    public static <S extends Event> MergedSubscriptionBuilder<S> merge(@NotNull Class<S> superClass, @NotNull Class<? extends S>... eventClasses) {
         return MergedSubscriptionBuilder.newBuilder(superClass, eventClasses);
     }
 
@@ -114,9 +114,9 @@ public final class Events {
      * @param <S>          the super class type
      * @return a {@link MergedSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
+    @NotNull
     @SafeVarargs
-    public static <S extends Event> MergedSubscriptionBuilder<S> merge(@Nonnull Class<S> superClass, @Nonnull EventPriority priority, @Nonnull Class<? extends S>... eventClasses) {
+    public static <S extends Event> MergedSubscriptionBuilder<S> merge(@NotNull Class<S> superClass, @NotNull EventPriority priority, @NotNull Class<? extends S>... eventClasses) {
         return MergedSubscriptionBuilder.newBuilder(superClass, priority, eventClasses);
     }
 
@@ -125,7 +125,7 @@ public final class Events {
      *
      * @param event the event to call
      */
-    public static void call(@Nonnull Event event) {
+    public static void call(@NotNull Event event) {
         Bukkit.getPluginManager().callEvent(event);
     }
 
@@ -134,8 +134,8 @@ public final class Events {
      *
      * @param event the event to call
      */
-    public static void callAsync(@Nonnull Event event) {
-        Schedulers.async().run(() -> call(event));
+    public static void callAsync(@NotNull Event event) {
+        Schedulers.runAsync(() -> call(event));
     }
 
     /**
@@ -143,8 +143,8 @@ public final class Events {
      *
      * @param event the event to call
      */
-    public static void callSync(@Nonnull Event event) {
-        Schedulers.sync().run(() -> call(event));
+    public static void callSync(@NotNull Event event) {
+        Schedulers.runGlobal(() -> call(event));
     }
 
     /**
@@ -152,8 +152,8 @@ public final class Events {
      *
      * @param event the event to call
      */
-    @Nonnull
-    public static <T extends Event> T callAndReturn(@Nonnull T event) {
+    @NotNull
+    public static <T extends Event> T callAndReturn(@NotNull T event) {
         Bukkit.getPluginManager().callEvent(event);
         return event;
     }
@@ -163,9 +163,9 @@ public final class Events {
      *
      * @param event the event to call
      */
-    @Nonnull
-    public static <T extends Event> T callAsyncAndJoin(@Nonnull T event) {
-        return Schedulers.async().supply(() -> callAndReturn(event)).join();
+    @NotNull
+    public static <T extends Event> T callAsyncAndJoin(@NotNull T event) {
+        return Schedulers.callAsync(() -> callAndReturn(event)).join();
     }
 
     /**
@@ -173,9 +173,9 @@ public final class Events {
      *
      * @param event the event to call
      */
-    @Nonnull
-    public static <T extends Event> T callSyncAndJoin(@Nonnull T event) {
-        return Schedulers.sync().supply(() -> callAndReturn(event)).join();
+    @NotNull
+    public static <T extends Event> T callSyncAndJoin(@NotNull T event) {
+        return Schedulers.callGlobal(() -> callAndReturn(event)).join();
     }
 
     private Events() {

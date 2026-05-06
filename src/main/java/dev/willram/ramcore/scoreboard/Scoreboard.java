@@ -28,7 +28,7 @@ package dev.willram.ramcore.scoreboard;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a Scoreboard on the server

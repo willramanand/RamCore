@@ -32,8 +32,8 @@ import dev.willram.ramcore.gson.JsonBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
@@ -97,7 +97,7 @@ public final class Point implements GsonSerializable {
         return this.position.subtract(x, y, z).withDirection(this.direction);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

@@ -34,7 +34,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -150,7 +150,7 @@ class RamEventListener<T extends Event> implements SingleSubscription<T>, EventE
         }
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Class<T> getEventClass() {
         return this.eventClass;

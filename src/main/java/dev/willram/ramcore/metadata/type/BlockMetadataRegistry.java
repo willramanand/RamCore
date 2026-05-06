@@ -31,7 +31,7 @@ import dev.willram.ramcore.metadata.MetadataRegistry;
 import dev.willram.ramcore.serialize.BlockPosition;
 import org.bukkit.block.Block;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,8 +46,8 @@ public interface BlockMetadataRegistry extends MetadataRegistry<BlockPosition> {
      * @param block the block
      * @return a metadata map
      */
-    @Nonnull
-    MetadataMap provide(@Nonnull Block block);
+    @NotNull
+    MetadataMap provide(@NotNull Block block);
 
     /**
      * Gets a {@link MetadataMap} for the given block, if one already exists and has
@@ -56,8 +56,8 @@ public interface BlockMetadataRegistry extends MetadataRegistry<BlockPosition> {
      * @param block the block
      * @return a metadata map, if present
      */
-    @Nonnull
-    Optional<MetadataMap> get(@Nonnull Block block);
+    @NotNull
+    Optional<MetadataMap> get(@NotNull Block block);
 
     /**
      * Gets a map of the blocks with a given metadata key
@@ -66,7 +66,7 @@ public interface BlockMetadataRegistry extends MetadataRegistry<BlockPosition> {
      * @param <K> the key type
      * @return an immutable map of blocks to key value
      */
-    @Nonnull
-    <K> Map<BlockPosition, K> getAllWithKey(@Nonnull MetadataKey<K> key);
+    @NotNull
+    <K> Map<BlockPosition, K> getAllWithKey(@NotNull MetadataKey<K> key);
 
 }

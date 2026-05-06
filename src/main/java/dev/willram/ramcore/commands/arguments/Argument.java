@@ -29,7 +29,7 @@ import com.google.common.reflect.TypeToken;
 import dev.willram.ramcore.commands.CommandInterruptException;
 import dev.willram.ramcore.commands.CommandParser;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 
 /**
@@ -49,26 +49,26 @@ public interface Argument {
      *
      * @return the value
      */
-    @Nonnull
+    @NotNull
     Optional<String> value();
 
-    @Nonnull
-    default <T> Optional<T> parse(@Nonnull ArgumentParser<T> parser) {
+    @NotNull
+    default <T> Optional<T> parse(@NotNull ArgumentParser<T> parser) {
         return parser.parse(this);
     }
 
-    @Nonnull
-    default <T> T parseOrFail(@Nonnull ArgumentParser<T> parser) throws CommandInterruptException {
+    @NotNull
+    default <T> T parseOrFail(@NotNull ArgumentParser<T> parser) throws CommandInterruptException {
         return parser.parseOrFail(this);
     }
 
-    @Nonnull
-    default <T> Optional<T> parse(@Nonnull TypeToken<T> type) {
+    @NotNull
+    default <T> Optional<T> parse(@NotNull TypeToken<T> type) {
         return CommandParser.parserRegistry().find(type).flatMap(this::parse);
     }
 
-    @Nonnull
-    default <T> T parseOrFail(@Nonnull TypeToken<T> type) throws CommandInterruptException {
+    @NotNull
+    default <T> T parseOrFail(@NotNull TypeToken<T> type) throws CommandInterruptException {
         ArgumentParser<T> parser = CommandParser.parserRegistry().find(type).orElse(null);
         if (parser == null) {
             throw new RuntimeException("Unable to find ArgumentParser for " + type);
@@ -76,13 +76,13 @@ public interface Argument {
         return parseOrFail(parser);
     }
 
-    @Nonnull
-    default <T> Optional<T> parse(@Nonnull Class<T> clazz) {
+    @NotNull
+    default <T> Optional<T> parse(@NotNull Class<T> clazz) {
         return CommandParser.parserRegistry().find(clazz).flatMap(this::parse);
     }
 
-    @Nonnull
-    default <T> T parseOrFail(@Nonnull Class<T> clazz) throws CommandInterruptException {
+    @NotNull
+    default <T> T parseOrFail(@NotNull Class<T> clazz) throws CommandInterruptException {
         ArgumentParser<T> parser = CommandParser.parserRegistry().find(clazz).orElse(null);
         if (parser == null) {
             throw new RuntimeException("Unable to find ArgumentParser for " + clazz);

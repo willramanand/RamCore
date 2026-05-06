@@ -10,8 +10,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,12 +39,12 @@ public class CommandContext {
         }
     }
 
-    @Nonnull
+    @NotNull
     public List<String> args() {
         return this.args;
     }
 
-    @Nonnull
+    @NotNull
     public Argument arg(int index) {
         return new SimpleArgument(index, rawArg(index));
     }
@@ -57,12 +57,12 @@ public class CommandContext {
         return this.args.get(index);
     }
 
-    @Nonnull
+    @NotNull
     public CommandSourceStack stack() {
         return stack;
     }
 
-    @Nonnull
+    @NotNull
     public CommandSender sender() {
         return this.sender;
     }

@@ -27,7 +27,7 @@ package dev.willram.ramcore.scoreboard;
 
 import dev.willram.ramcore.RamPlugin;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link ScoreboardProvider} for {@link PacketScoreboard}s.
@@ -40,7 +40,7 @@ public final class PacketScoreboardProvider implements ScoreboardProvider {
         this.plugin = plugin;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public synchronized PacketScoreboard getScoreboard() {
         if (this.scoreboard == null) {

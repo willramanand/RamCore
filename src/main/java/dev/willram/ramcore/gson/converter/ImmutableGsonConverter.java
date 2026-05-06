@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 class ImmutableGsonConverter extends AbstractGsonConverter<ImmutableMap<String, Object>, ImmutableList<Object>, ImmutableSet<Object>> {
     public static final ImmutableGsonConverter INSTANCE = new ImmutableGsonConverter();

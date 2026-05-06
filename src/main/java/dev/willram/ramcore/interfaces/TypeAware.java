@@ -27,7 +27,7 @@ package dev.willram.ramcore.interfaces;
 
 import com.google.common.reflect.TypeToken;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents an object that knows it's own type parameter.
@@ -36,7 +36,7 @@ import javax.annotation.Nonnull;
  */
 public interface TypeAware<T> {
 
-    @Nonnull
+    @NotNull
     TypeToken<T> getType();
 
 }

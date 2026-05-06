@@ -27,7 +27,7 @@ package dev.willram.ramcore.event.functional;
 
 import dev.willram.ramcore.exception.RamExceptions;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -47,8 +47,8 @@ public interface SubscriptionBuilder<T> {
      * @param predicate the expiry test
      * @return ths builder instance
      */
-    @Nonnull
-    SubscriptionBuilder<T> expireIf(@Nonnull Predicate<T> predicate);
+    @NotNull
+    SubscriptionBuilder<T> expireIf(@NotNull Predicate<T> predicate);
 
     /**
      * Sets the expiry time on the handler
@@ -58,8 +58,8 @@ public interface SubscriptionBuilder<T> {
      * @return the builder instance
      * @throws IllegalArgumentException if duration is not greater than or equal to 1
      */
-    @Nonnull
-    SubscriptionBuilder<T> expireAfter(long duration, @Nonnull TimeUnit unit);
+    @NotNull
+    SubscriptionBuilder<T> expireAfter(long duration, @NotNull TimeUnit unit);
 
     /**
      * Sets the number of calls until the handler will automatically be unregistered
@@ -71,7 +71,7 @@ public interface SubscriptionBuilder<T> {
      * @return the builder instance
      * @throws IllegalArgumentException if maxCalls is not greater than or equal to 1
      */
-    @Nonnull
+    @NotNull
     SubscriptionBuilder<T> expireAfter(long maxCalls);
 
     /**
@@ -83,7 +83,7 @@ public interface SubscriptionBuilder<T> {
      * @param predicate the filter
      * @return the builder instance
      */
-    @Nonnull
-    SubscriptionBuilder<T> filter(@Nonnull Predicate<T> predicate);
+    @NotNull
+    SubscriptionBuilder<T> filter(@NotNull Predicate<T> predicate);
 
 }

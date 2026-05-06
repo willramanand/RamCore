@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.scheduler;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,7 +48,7 @@ public final class Ticks {
      * @param unit the unit the duration is in
      * @return the number of ticks which represent the duration
      */
-    public static long from(long duration, @Nonnull TimeUnit unit) {
+    public static long from(long duration, @NotNull TimeUnit unit) {
         return unit.toMillis(duration) / MILLISECONDS_PER_TICK;
     }
 
@@ -61,7 +61,7 @@ public final class Ticks {
      * @param unit the unit to return the duration in
      * @return a duration value in the given unit, representing the number of ticks
      */
-    public static long to(long ticks, @Nonnull TimeUnit unit) {
+    public static long to(long ticks, @NotNull TimeUnit unit) {
         return unit.convert(ticks * MILLISECONDS_PER_TICK, TimeUnit.MILLISECONDS);
     }
 

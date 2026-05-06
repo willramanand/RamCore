@@ -30,7 +30,7 @@ import dev.willram.ramcore.event.functional.ExpiryTestStage;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -55,9 +55,9 @@ class SingleSubscriptionBuilderImpl<T extends Event> implements SingleSubscripti
         this.priority = priority;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public SingleSubscriptionBuilder<T> expireIf(@Nonnull BiPredicate<SingleSubscription<T>, T> predicate, @Nonnull ExpiryTestStage... testPoints) {
+    public SingleSubscriptionBuilder<T> expireIf(@NotNull BiPredicate<SingleSubscription<T>, T> predicate, @NotNull ExpiryTestStage... testPoints) {
         Objects.requireNonNull(testPoints, "testPoints");
         Objects.requireNonNull(predicate, "predicate");
         for (ExpiryTestStage testPoint : testPoints) {
@@ -78,30 +78,30 @@ class SingleSubscriptionBuilderImpl<T extends Event> implements SingleSubscripti
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public SingleSubscriptionBuilder<T> filter(@Nonnull Predicate<T> predicate) {
+    public SingleSubscriptionBuilder<T> filter(@NotNull Predicate<T> predicate) {
         Objects.requireNonNull(predicate, "predicate");
         this.filters.add(predicate);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public SingleSubscriptionBuilder<T> exceptionConsumer(@Nonnull BiConsumer<? super T, Throwable> exceptionConsumer) {
+    public SingleSubscriptionBuilder<T> exceptionConsumer(@NotNull BiConsumer<? super T, Throwable> exceptionConsumer) {
         Objects.requireNonNull(exceptionConsumer, "exceptionConsumer");
         this.exceptionConsumer = exceptionConsumer;
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public SingleSubscriptionBuilder<T> handleSubclasses() {
         this.handleSubclasses = true;
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public SingleHandlerList<T> handlers() {
         return new SingleHandlerListImpl<>(this);

@@ -26,8 +26,6 @@
 package dev.willram.ramcore.scheduler;
 
 import dev.willram.ramcore.exception.RamExceptions;
-import dev.willram.ramcore.utils.LoaderUtils;
-import org.bukkit.Bukkit;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -53,20 +51,20 @@ public final class RamExecutors {
     }
 
     public static void shutdown() {
-        ASYNC_HELPER.cancelRepeatingTasks();
+        ASYNC_HELPER.shutdownNow();
     }
 
     private static final class BukkitSyncExecutor implements Executor {
         @Override
         public void execute(Runnable runnable) {
-            Bukkit.getScheduler().scheduleSyncDelayedTask(LoaderUtils.getPlugin(), RamExceptions.wrapSchedulerTask(runnable));
+            Schedulers.sync().execute(runnable);
         }
     }
 
     private static final class BukkitAsyncExecutor implements Executor {
         @Override
         public void execute(Runnable runnable) {
-            Bukkit.getScheduler().runTaskAsynchronously(LoaderUtils.getPlugin(), RamExceptions.wrapSchedulerTask(runnable));
+            Schedulers.async().execute(runnable);
         }
     }
 

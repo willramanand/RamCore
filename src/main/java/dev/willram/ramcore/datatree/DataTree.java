@@ -30,7 +30,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.spongepowered.configurate.ConfigurationNode;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -69,8 +69,8 @@ public interface DataTree {
      * @param element the element
      * @return a tree
      */
-    @Nonnull
-    static GsonDataTree from(@Nonnull JsonElement element) {
+    @NotNull
+    static GsonDataTree from(@NotNull JsonElement element) {
         return new GsonDataTree(element);
     }
 
@@ -80,8 +80,8 @@ public interface DataTree {
      * @param node the node
      * @return a tree
      */
-    @Nonnull
-    static ConfigurateDataTree from(@Nonnull ConfigurationNode node) {
+    @NotNull
+    static ConfigurateDataTree from(@NotNull ConfigurationNode node) {
         return new ConfigurateDataTree(node);
     }
 
@@ -94,15 +94,15 @@ public interface DataTree {
      * @param path the path
      * @return the resultant tree node
      */
-    @Nonnull
-    DataTree resolve(@Nonnull Object... path);
+    @NotNull
+    DataTree resolve(@NotNull Object... path);
 
     /**
      * Gets a stream of the member nodes, as if this tree was a {@link JsonObject}.
      *
      * @return the members
      */
-    @Nonnull
+    @NotNull
     Stream<? extends Map.Entry<String, ? extends DataTree>> asObject();
 
     /**
@@ -110,7 +110,7 @@ public interface DataTree {
      *
      * @return the members
      */
-    @Nonnull
+    @NotNull
     Stream<? extends DataTree> asArray();
 
     /**
@@ -118,7 +118,7 @@ public interface DataTree {
      *
      * @return the members
      */
-    @Nonnull
+    @NotNull
     Stream<? extends Map.Entry<Integer, ? extends DataTree>> asIndexedArray();
 
     /**
@@ -126,7 +126,7 @@ public interface DataTree {
      *
      * @return this as a string
      */
-    @Nonnull
+    @NotNull
     String asString();
 
     /**
@@ -134,7 +134,7 @@ public interface DataTree {
      *
      * @return this as a number
      */
-    @Nonnull
+    @NotNull
     Number asNumber();
 
     /**

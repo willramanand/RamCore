@@ -28,7 +28,7 @@ package dev.willram.ramcore.bucket;
 import com.google.common.collect.ImmutableList;
 import dev.willram.ramcore.bucket.partitioning.PartitioningStrategy;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -103,19 +103,19 @@ public abstract class AbstractBucket<E> extends AbstractSet<E> implements Bucket
         return this.size;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public BucketPartition<E> getPartition(int index) {
         return this.partitionView.get(index);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public List<BucketPartition<E>> getPartitions() {
         return this.partitionView;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Cycle<BucketPartition<E>> asCycle() {
         return this.partitionCycle;
@@ -156,7 +156,7 @@ public abstract class AbstractBucket<E> extends AbstractSet<E> implements Bucket
         this.content.clear();
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Iterator<E> iterator() {
         return new BucketIterator();
@@ -290,12 +290,12 @@ public abstract class AbstractBucket<E> extends AbstractSet<E> implements Bucket
         }
 
         @Override
-        public <T> T[] toArray(@Nonnull T[] a) {
+        public <T> T[] toArray(@NotNull T[] a) {
             return this.backing.toArray(a);
         }
 
         @Override
-        public boolean containsAll(@Nonnull Collection<?> c) {
+        public boolean containsAll(@NotNull Collection<?> c) {
             return this.backing.containsAll(c);
         }
 

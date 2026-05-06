@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.cooldown;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalLong;
@@ -44,8 +44,8 @@ public interface CooldownMap<T> {
      * @param base the cooldown to base off
      * @return a new collection
      */
-    @Nonnull
-    static <T> CooldownMap<T> create(@Nonnull Cooldown base) {
+    @NotNull
+    static <T> CooldownMap<T> create(@NotNull Cooldown base) {
         Objects.requireNonNull(base, "base");
         return new CooldownMapImpl<>(base);
     }
@@ -55,7 +55,7 @@ public interface CooldownMap<T> {
      *
      * @return the base cooldown
      */
-    @Nonnull
+    @NotNull
     Cooldown getBase();
 
     /**
@@ -67,51 +67,51 @@ public interface CooldownMap<T> {
      * @param key the key
      * @return a cooldown instance
      */
-    @Nonnull
-    Cooldown get(@Nonnull T key);
+    @NotNull
+    Cooldown get(@NotNull T key);
 
-    void put(@Nonnull T key, @Nonnull Cooldown cooldown);
+    void put(@NotNull T key, @NotNull Cooldown cooldown);
 
     /**
      * Gets the cooldowns contained within this collection.
      *
      * @return the backing map
      */
-    @Nonnull
+    @NotNull
     Map<T, Cooldown> getAll();
 
     /* methods from Cooldown */
 
-    default boolean test(@Nonnull T key) {
+    default boolean test(@NotNull T key) {
         return get(key).test();
     }
 
-    default boolean testSilently(@Nonnull T key) {
+    default boolean testSilently(@NotNull T key) {
         return get(key).testSilently();
     }
 
-    default long elapsed(@Nonnull T key) {
+    default long elapsed(@NotNull T key) {
         return get(key).elapsed();
     }
 
-    default void reset(@Nonnull T key) {
+    default void reset(@NotNull T key) {
         get(key).reset();
     }
 
-    default long remainingMillis(@Nonnull T key) {
+    default long remainingMillis(@NotNull T key) {
         return get(key).remainingMillis();
     }
 
-    default long remainingTime(@Nonnull T key, @Nonnull TimeUnit unit) {
+    default long remainingTime(@NotNull T key, @NotNull TimeUnit unit) {
         return get(key).remainingTime(unit);
     }
 
-    @Nonnull
-    default OptionalLong getLastTested(@Nonnull T key) {
+    @NotNull
+    default OptionalLong getLastTested(@NotNull T key) {
         return get(key).getLastTested();
     }
 
-    default void setLastTested(@Nonnull T key, long time) {
+    default void setLastTested(@NotNull T key, long time) {
         get(key).setLastTested(time);
     }
 

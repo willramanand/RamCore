@@ -32,7 +32,7 @@ import dev.willram.ramcore.gson.GsonSerializable;
 import dev.willram.ramcore.scheduler.Ticks;
 import dev.willram.ramcore.time.Time;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
@@ -61,7 +61,7 @@ public interface Cooldown extends GsonSerializable {
      * @param ticks the number of ticks
      * @return a new cooldown
      */
-    @Nonnull
+    @NotNull
     static Cooldown ofTicks(long ticks) {
         return new CooldownImpl(Ticks.to(ticks, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     }
@@ -73,8 +73,8 @@ public interface Cooldown extends GsonSerializable {
      * @param unit the unit of time
      * @return a new cooldown
      */
-    @Nonnull
-    static Cooldown of(long amount, @Nonnull TimeUnit unit) {
+    @NotNull
+    static Cooldown of(long amount, @NotNull TimeUnit unit) {
         return new CooldownImpl(amount, unit);
     }
 
@@ -148,7 +148,7 @@ public interface Cooldown extends GsonSerializable {
      *
      * @return the last call time
      */
-    @Nonnull
+    @NotNull
     OptionalLong getLastTested();
 
     /**
@@ -173,7 +173,7 @@ public interface Cooldown extends GsonSerializable {
      *
      * @return a cloned cooldown instance
      */
-    @Nonnull
+    @NotNull
     Cooldown copy();
 
 }

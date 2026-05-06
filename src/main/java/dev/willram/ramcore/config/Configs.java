@@ -5,7 +5,7 @@ import org.bukkit.Location;
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 import org.spongepowered.configurate.serialize.TypeSerializerCollection;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.nio.file.Path;
 
 /**
@@ -20,7 +20,7 @@ public abstract class Configs {
                 .build();
     }
 
-    @Nonnull
+    @NotNull
     public static TypeSerializerCollection typeSerializers() {
         return TYPE_SERIALIZERS;
     }

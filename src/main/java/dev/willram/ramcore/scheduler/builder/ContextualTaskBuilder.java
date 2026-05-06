@@ -29,7 +29,7 @@ package dev.willram.ramcore.scheduler.builder;
 import dev.willram.ramcore.scheduler.Scheduler;
 import dev.willram.ramcore.scheduler.Task;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.function.Consumer;
 
 /**
@@ -38,10 +38,10 @@ import java.util.function.Consumer;
  */
 public interface ContextualTaskBuilder {
 
-    @Nonnull
-    Task consume(@Nonnull Consumer<Task> consumer);
+    @NotNull
+    Task consume(@NotNull Consumer<Task> consumer);
 
-    @Nonnull
-    Task run(@Nonnull Runnable runnable);
+    @NotNull
+    Task run(@NotNull Runnable runnable);
 
 }

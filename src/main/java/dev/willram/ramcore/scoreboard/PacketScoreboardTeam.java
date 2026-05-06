@@ -154,7 +154,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.displayName = displayName;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -171,7 +171,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.prefix = prefix;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -188,7 +188,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.suffix = suffix;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -203,7 +203,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.allowFriendlyFire = allowFriendlyFire;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -218,7 +218,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.canSeeFriendlyInvisibles = canSeeFriendlyInvisibles;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -234,7 +234,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.nameTagVisibility = nameTagVisibility;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -250,7 +250,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.collisionRule = collisionRule;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -266,7 +266,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
         }
 
         this.color = color;
-        Protocol.broadcastPacket(this.subscribed, newUpdatePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newUpdatePacket());
     }
 
     @Override
@@ -277,7 +277,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
             return false;
         }
 
-        Protocol.broadcastPacket(this.subscribed, newTeamMemberUpdatePacket(player, MemberAction.ADD));
+        Protocol.broadcastPacketScheduled(this.subscribed, newTeamMemberUpdatePacket(player, MemberAction.ADD));
         return true;
     }
 
@@ -289,7 +289,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
             return false;
         }
 
-        Protocol.broadcastPacket(this.subscribed, newTeamMemberUpdatePacket(player, MemberAction.REMOVE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newTeamMemberUpdatePacket(player, MemberAction.REMOVE));
         return true;
     }
 
@@ -306,7 +306,7 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
 
     @Override
     public void subscribe(Player player) {
-        Protocol.sendPacket(player, newCreatePacket());
+        Protocol.sendPacketScheduled(player, newCreatePacket());
         this.subscribed.add(player);
     }
 
@@ -321,12 +321,12 @@ public class PacketScoreboardTeam implements ScoreboardTeam {
             return;
         }
 
-        Protocol.sendPacket(player, newRemovePacket());
+        Protocol.sendPacketScheduled(player, newRemovePacket());
     }
 
     @Override
     public void unsubscribeAll() {
-        Protocol.broadcastPacket(this.subscribed, newRemovePacket());
+        Protocol.broadcastPacketScheduled(this.subscribed, newRemovePacket());
         this.subscribed.clear();
     }
 

@@ -36,7 +36,7 @@ import dev.willram.ramcore.reflect.MinecraftVersions;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
@@ -132,7 +132,7 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
         }
 
         this.displayName = displayName;
-        Protocol.broadcastPacket(this.subscribed, newObjectivePacket(UpdateType.UPDATE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newObjectivePacket(UpdateType.UPDATE));
     }
 
     @Override
@@ -148,7 +148,7 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
         }
 
         this.displaySlot = displaySlot;
-        Protocol.broadcastPacket(this.subscribed, newDisplaySlotPacket(displaySlot));
+        Protocol.broadcastPacketScheduled(this.subscribed, newDisplaySlotPacket(displaySlot));
     }
 
     @Override
@@ -179,7 +179,7 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
             return;
         }
 
-        Protocol.broadcastPacket(this.subscribed, newScorePacket(name, value, ScoreboardAction.CHANGE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newScorePacket(name, value, ScoreboardAction.CHANGE));
     }
 
     @Override
@@ -191,7 +191,7 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
             return false;
         }
 
-        Protocol.broadcastPacket(this.subscribed, newScorePacket(name, 0, ScoreboardAction.REMOVE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newScorePacket(name, 0, ScoreboardAction.REMOVE));
         return true;
     }
 
@@ -199,7 +199,7 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
     public void clearScores() {
         this.scores.clear();
 
-        Protocol.broadcastPacket(this.subscribed, newObjectivePacket(UpdateType.REMOVE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newObjectivePacket(UpdateType.REMOVE));
         for (Player player : this.subscribed) {
             subscribe(player);
         }
@@ -240,10 +240,10 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
     @Override
     public void subscribe(Player player) {
         Objects.requireNonNull(player, "player");
-        Protocol.sendPacket(player, newObjectivePacket(UpdateType.CREATE));
-        Protocol.sendPacket(player, newDisplaySlotPacket(getDisplaySlot()));
+        Protocol.sendPacketScheduled(player, newObjectivePacket(UpdateType.CREATE));
+        Protocol.sendPacketScheduled(player, newDisplaySlotPacket(getDisplaySlot()));
         for (Map.Entry<String, Integer> score : getScores().entrySet()) {
-            Protocol.sendPacket(player, newScorePacket(score.getKey(), score.getValue(), ScoreboardAction.CHANGE));
+            Protocol.sendPacketScheduled(player, newScorePacket(score.getKey(), score.getValue(), ScoreboardAction.CHANGE));
         }
         this.subscribed.add(player);
     }
@@ -260,12 +260,12 @@ public class PacketScoreboardObjective implements ScoreboardObjective {
             return;
         }
 
-        Protocol.sendPacket(player, newObjectivePacket(UpdateType.REMOVE));
+        Protocol.sendPacketScheduled(player, newObjectivePacket(UpdateType.REMOVE));
     }
 
     @Override
     public void unsubscribeAll() {
-        Protocol.broadcastPacket(this.subscribed, newObjectivePacket(UpdateType.REMOVE));
+        Protocol.broadcastPacketScheduled(this.subscribed, newObjectivePacket(UpdateType.REMOVE));
         this.subscribed.clear();
     }
 

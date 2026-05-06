@@ -31,9 +31,10 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketContainer;
 import dev.willram.ramcore.event.functional.protocol.ProtocolSubscriptionBuilder;
+import dev.willram.ramcore.scheduler.Schedulers;
 import org.bukkit.entity.Player;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Utilities for working with ProtocolLib.
@@ -46,8 +47,8 @@ public final class Protocol {
      * @param packets the packets to handle
      * @return a {@link ProtocolSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
-    public static ProtocolSubscriptionBuilder subscribe(@Nonnull PacketType... packets) {
+    @NotNull
+    public static ProtocolSubscriptionBuilder subscribe(@NotNull PacketType... packets) {
         return ProtocolSubscriptionBuilder.newBuilder(packets);
     }
 
@@ -58,8 +59,8 @@ public final class Protocol {
      * @param packets the packets to handle
      * @return a {@link ProtocolSubscriptionBuilder} to construct the event handler
      */
-    @Nonnull
-    public static ProtocolSubscriptionBuilder subscribe(@Nonnull ListenerPriority priority, @Nonnull PacketType... packets) {
+    @NotNull
+    public static ProtocolSubscriptionBuilder subscribe(@NotNull ListenerPriority priority, @NotNull PacketType... packets) {
         return ProtocolSubscriptionBuilder.newBuilder(priority, packets);
     }
 
@@ -68,7 +69,7 @@ public final class Protocol {
      *
      * @return the protocol manager.
      */
-    @Nonnull
+    @NotNull
     public static ProtocolManager manager() {
         return ProtocolLibrary.getProtocolManager();
     }
@@ -79,8 +80,18 @@ public final class Protocol {
      * @param player the player
      * @param packet the packet
      */
-    public static void sendPacket(@Nonnull Player player, @Nonnull PacketContainer packet) {
+    public static void sendPacket(@NotNull Player player, @NotNull PacketContainer packet) {
         manager().sendServerPacket(player, packet);
+    }
+
+    /**
+     * Sends a packet on the scheduler context owned by the given player.
+     *
+     * @param player the player
+     * @param packet the packet
+     */
+    public static void sendPacketScheduled(@NotNull Player player, @NotNull PacketContainer packet) {
+        Schedulers.run(player, () -> sendPacket(player, packet));
     }
 
     /**
@@ -88,7 +99,7 @@ public final class Protocol {
      *
      * @param packet the packet
      */
-    public static void broadcastPacket(@Nonnull PacketContainer packet) {
+    public static void broadcastPacket(@NotNull PacketContainer packet) {
         manager().broadcastServerPacket(packet);
     }
 
@@ -98,9 +109,21 @@ public final class Protocol {
      * @param players the players
      * @param packet the packet
      */
-    public static void broadcastPacket(@Nonnull Iterable<Player> players, @Nonnull PacketContainer packet) {
+    public static void broadcastPacket(@NotNull Iterable<Player> players, @NotNull PacketContainer packet) {
         for (Player player : players) {
             sendPacket(player, packet);
+        }
+    }
+
+    /**
+     * Sends a packet to each player on that player's scheduler context.
+     *
+     * @param players the players
+     * @param packet the packet
+     */
+    public static void broadcastPacketScheduled(@NotNull Iterable<Player> players, @NotNull PacketContainer packet) {
+        for (Player player : players) {
+            sendPacketScheduled(player, packet);
         }
     }
 

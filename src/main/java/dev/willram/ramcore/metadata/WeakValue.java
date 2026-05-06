@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.metadata;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 import java.util.function.Supplier;

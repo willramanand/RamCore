@@ -29,7 +29,7 @@ import dev.willram.ramcore.event.SingleSubscription;
 import dev.willram.ramcore.utils.LoaderUtils;
 import org.bukkit.event.Event;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -39,19 +39,19 @@ class SingleHandlerListImpl<T extends Event> implements SingleHandlerList<T> {
     private final SingleSubscriptionBuilderImpl<T> builder;
     private final List<BiConsumer<SingleSubscription<T>, ? super T>> handlers = new ArrayList<>(1);
 
-    SingleHandlerListImpl(@Nonnull SingleSubscriptionBuilderImpl<T> builder) {
+    SingleHandlerListImpl(@NotNull SingleSubscriptionBuilderImpl<T> builder) {
         this.builder = builder;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public SingleHandlerList<T> biConsumer(@Nonnull BiConsumer<SingleSubscription<T>, ? super T> handler) {
+    public SingleHandlerList<T> biConsumer(@NotNull BiConsumer<SingleSubscription<T>, ? super T> handler) {
         Objects.requireNonNull(handler, "handler");
         this.handlers.add(handler);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public SingleSubscription<T> register() {
         if (this.handlers.isEmpty()) {

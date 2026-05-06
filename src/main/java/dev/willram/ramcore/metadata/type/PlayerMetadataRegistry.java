@@ -30,7 +30,7 @@ import dev.willram.ramcore.metadata.MetadataMap;
 import dev.willram.ramcore.metadata.MetadataRegistry;
 import org.bukkit.entity.Player;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,8 +46,8 @@ public interface PlayerMetadataRegistry extends MetadataRegistry<UUID> {
      * @param player the player
      * @return a metadata map
      */
-    @Nonnull
-    MetadataMap provide(@Nonnull Player player);
+    @NotNull
+    MetadataMap provide(@NotNull Player player);
 
     /**
      * Gets a {@link MetadataMap} for the given player, if one already exists and has
@@ -56,8 +56,8 @@ public interface PlayerMetadataRegistry extends MetadataRegistry<UUID> {
      * @param player the player
      * @return a metadata map, if present
      */
-    @Nonnull
-    Optional<MetadataMap> get(@Nonnull Player player);
+    @NotNull
+    Optional<MetadataMap> get(@NotNull Player player);
 
     /**
      * Gets a map of the players with a given metadata key
@@ -66,7 +66,7 @@ public interface PlayerMetadataRegistry extends MetadataRegistry<UUID> {
      * @param <K> the key type
      * @return an immutable map of players to key value
      */
-    @Nonnull
-    <K> Map<Player, K> getAllWithKey(@Nonnull MetadataKey<K> key);
+    @NotNull
+    <K> Map<Player, K> getAllWithKey(@NotNull MetadataKey<K> key);
 
 }

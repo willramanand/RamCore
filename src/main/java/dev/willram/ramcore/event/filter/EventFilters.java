@@ -32,7 +32,7 @@ import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.function.Predicate;
 
 /**
@@ -68,7 +68,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the event isn't cancelled
      */
-    @Nonnull
+    @NotNull
     public static <T extends Cancellable> Predicate<T> ignoreCancelled() {
         return (Predicate<T>) IGNORE_CANCELLED;
     }
@@ -79,7 +79,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the event is cancelled
      */
-    @Nonnull
+    @NotNull
     public static <T extends Cancellable> Predicate<T> ignoreNotCancelled() {
         return (Predicate<T>) IGNORE_UNCANCELLED;
     }
@@ -90,7 +90,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the login is allowed
      */
-    @Nonnull
+    @NotNull
     public static <T extends PlayerLoginEvent> Predicate<T> ignoreDisallowedLogin() {
         return (Predicate<T>) IGNORE_DISALLOWED_LOGIN;
     }
@@ -101,7 +101,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the login is allowed
      */
-    @Nonnull
+    @NotNull
     public static <T extends AsyncPlayerPreLoginEvent> Predicate<T> ignoreDisallowedPreLogin() {
         return (Predicate<T>) IGNORE_DISALLOWED_PRE_LOGIN;
     }
@@ -112,7 +112,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the player has moved over a block
      */
-    @Nonnull
+    @NotNull
     public static <T extends PlayerMoveEvent> Predicate<T> ignoreSameBlock() {
         return (Predicate<T>) IGNORE_SAME_BLOCK;
     }
@@ -124,7 +124,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the player has moved across a block border
      */
-    @Nonnull
+    @NotNull
     public static <T extends PlayerMoveEvent> Predicate<T> ignoreSameBlockAndY() {
         return (Predicate<T>) IGNORE_SAME_BLOCK_AND_Y;
     }
@@ -135,7 +135,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the player has moved over a chunk border
      */
-    @Nonnull
+    @NotNull
     public static <T extends PlayerMoveEvent> Predicate<T> ignoreSameChunk() {
         return (Predicate<T>) IGNORE_SAME_CHUNK;
     }
@@ -147,7 +147,7 @@ public final class EventFilters {
 //     * @param <T> the event type
 //     * @return a predicate which only returns true if the entity has a given metadata key
 //     */
-//    @Nonnull
+//    @NotNull
 //    public static <T extends EntityEvent> Predicate<T> entityHasMetadata(MetadataKey<?> key) {
 //        return e -> Metadata.provideForEntity(e.getEntity()).has(key);
 //    }
@@ -159,7 +159,7 @@ public final class EventFilters {
 //     * @param <T> the event type
 //     * @return a predicate which only returns true if the player has a given metadata key
 //     */
-//    @Nonnull
+//    @NotNull
 //    public static <T extends PlayerEvent> Predicate<T> playerHasMetadata(MetadataKey<?> key) {
 //        return e -> Metadata.provideForPlayer(e.getPlayer()).has(key);
 //    }
@@ -171,7 +171,7 @@ public final class EventFilters {
      * @param <T> the event type
      * @return a predicate which only returns true if the player has the given permission
      */
-    @Nonnull
+    @NotNull
     public static <T extends PlayerEvent> Predicate<T> playerHasPermission(String permission) {
         return e -> e.getPlayer().hasPermission(permission);
     }

@@ -37,7 +37,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,23 +63,23 @@ final class StandardMetadataRegistries {
 
     private static final class PlayerRegistry extends AbstractMetadataRegistry<UUID> implements PlayerMetadataRegistry {
 
-        @Nonnull
+        @NotNull
         @Override
-        public MetadataMap provide(@Nonnull Player player) {
+        public MetadataMap provide(@NotNull Player player) {
             Objects.requireNonNull(player, "player");
             return provide(player.getUniqueId());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public Optional<MetadataMap> get(@Nonnull Player player) {
+        public Optional<MetadataMap> get(@NotNull Player player) {
             Objects.requireNonNull(player, "player");
             return get(player.getUniqueId());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public <K> Map<Player, K> getAllWithKey(@Nonnull MetadataKey<K> key) {
+        public <K> Map<Player, K> getAllWithKey(@NotNull MetadataKey<K> key) {
             Objects.requireNonNull(key, "key");
             ImmutableMap.Builder<Player, K> ret = ImmutableMap.builder();
             this.cache.asMap().forEach((uuid, map) -> map.get(key).ifPresent(t -> {
@@ -94,23 +94,23 @@ final class StandardMetadataRegistries {
 
     private static final class EntityRegistry extends AbstractMetadataRegistry<UUID> implements EntityMetadataRegistry {
 
-        @Nonnull
+        @NotNull
         @Override
-        public MetadataMap provide(@Nonnull Entity entity) {
+        public MetadataMap provide(@NotNull Entity entity) {
             Objects.requireNonNull(entity, "entity");
             return provide(entity.getUniqueId());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public Optional<MetadataMap> get(@Nonnull Entity entity) {
+        public Optional<MetadataMap> get(@NotNull Entity entity) {
             Objects.requireNonNull(entity, "entity");
             return get(entity.getUniqueId());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public <K> Map<Entity, K> getAllWithKey(@Nonnull MetadataKey<K> key) {
+        public <K> Map<Entity, K> getAllWithKey(@NotNull MetadataKey<K> key) {
             Objects.requireNonNull(key, "key");
             ImmutableMap.Builder<Entity, K> ret = ImmutableMap.builder();
             this.cache.asMap().forEach((uuid, map) -> map.get(key).ifPresent(t -> {
@@ -125,23 +125,23 @@ final class StandardMetadataRegistries {
 
     private static final class BlockRegistry extends AbstractMetadataRegistry<BlockPosition> implements BlockMetadataRegistry {
 
-        @Nonnull
+        @NotNull
         @Override
-        public MetadataMap provide(@Nonnull Block block) {
+        public MetadataMap provide(@NotNull Block block) {
             Objects.requireNonNull(block, "block");
             return provide(BlockPosition.of(block));
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public Optional<MetadataMap> get(@Nonnull Block block) {
+        public Optional<MetadataMap> get(@NotNull Block block) {
             Objects.requireNonNull(block, "block");
             return get(BlockPosition.of(block));
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public <K> Map<BlockPosition, K> getAllWithKey(@Nonnull MetadataKey<K> key) {
+        public <K> Map<BlockPosition, K> getAllWithKey(@NotNull MetadataKey<K> key) {
             Objects.requireNonNull(key, "key");
             ImmutableMap.Builder<BlockPosition, K> ret = ImmutableMap.builder();
             this.cache.asMap().forEach((pos, map) -> map.get(key).ifPresent(t -> ret.put(pos, t)));
@@ -151,23 +151,23 @@ final class StandardMetadataRegistries {
 
     private static final class WorldRegistry extends AbstractMetadataRegistry<UUID> implements WorldMetadataRegistry {
 
-        @Nonnull
+        @NotNull
         @Override
-        public MetadataMap provide(@Nonnull World world) {
+        public MetadataMap provide(@NotNull World world) {
             Objects.requireNonNull(world, "world");
             return provide(world.getUID());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public Optional<MetadataMap> get(@Nonnull World world) {
+        public Optional<MetadataMap> get(@NotNull World world) {
             Objects.requireNonNull(world, "world");
             return get(world.getUID());
         }
 
-        @Nonnull
+        @NotNull
         @Override
-        public <K> Map<World, K> getAllWithKey(@Nonnull MetadataKey<K> key) {
+        public <K> Map<World, K> getAllWithKey(@NotNull MetadataKey<K> key) {
             Objects.requireNonNull(key, "key");
             ImmutableMap.Builder<World, K> ret = ImmutableMap.builder();
             this.cache.asMap().forEach((uuid, map) -> map.get(key).ifPresent(t -> {

@@ -29,7 +29,7 @@ package dev.willram.ramcore.scheduler.builder;
 import dev.willram.ramcore.promise.ThreadContext;
 import dev.willram.ramcore.scheduler.Scheduler;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -42,7 +42,7 @@ public interface TaskBuilder {
      *
      * @return a task builder instance
      */
-    @Nonnull
+    @NotNull
     static TaskBuilder newBuilder() {
         return TaskBuilderImpl.INSTANCE;
     }
@@ -54,8 +54,8 @@ public interface TaskBuilder {
      * @param context the context to run the task in
      * @return a contextual builder
      */
-    @Nonnull
-    default ThreadContextual on(@Nonnull ThreadContext context) {
+    @NotNull
+    default ThreadContextual on(@NotNull ThreadContext context) {
         return switch (context) {
             case SYNC -> sync();
             case ASYNC -> async();
@@ -69,7 +69,7 @@ public interface TaskBuilder {
      *
      * @return a "sync" contextual builder
      */
-    @Nonnull
+    @NotNull
     ThreadContextual sync();
 
     /**
@@ -78,7 +78,7 @@ public interface TaskBuilder {
      *
      * @return an "async" contextual builder
      */
-    @Nonnull
+    @NotNull
     ThreadContextual async();
 
     /**
@@ -92,7 +92,7 @@ public interface TaskBuilder {
          *
          * @return an "instant" promise builder
          */
-        @Nonnull
+        @NotNull
         ContextualPromiseBuilder now();
 
         /**
@@ -102,7 +102,7 @@ public interface TaskBuilder {
          * @param ticks the number of ticks to delay execution by
          * @return a delayed builder
          */
-        @Nonnull
+        @NotNull
         DelayedTick after(long ticks);
 
         /**
@@ -113,8 +113,8 @@ public interface TaskBuilder {
          * @param unit the units of the duration
          * @return a delayed builder
          */
-        @Nonnull
-        DelayedTime after(long duration, @Nonnull TimeUnit unit);
+        @NotNull
+        DelayedTime after(long duration, @NotNull TimeUnit unit);
 
         /**
          * Marks that the new task should run after the specified delay,
@@ -123,7 +123,7 @@ public interface TaskBuilder {
          * @param ticks the number of ticks to delay execution by
          * @return a delayed builder
          */
-        @Nonnull
+        @NotNull
         ContextualTaskBuilder afterAndEvery(long ticks);
 
         /**
@@ -134,8 +134,8 @@ public interface TaskBuilder {
          * @param unit the units of the duration
          * @return a delayed builder
          */
-        @Nonnull
-        ContextualTaskBuilder afterAndEvery(long duration, @Nonnull TimeUnit unit);
+        @NotNull
+        ContextualTaskBuilder afterAndEvery(long duration, @NotNull TimeUnit unit);
 
         /**
          * Marks that the new task should start running instantly, but repeat on the specified interval,
@@ -144,7 +144,7 @@ public interface TaskBuilder {
          * @param ticks the number of ticks to wait between executions
          * @return a delayed builder
          */
-        @Nonnull
+        @NotNull
         ContextualTaskBuilder every(long ticks);
 
         /**
@@ -155,8 +155,8 @@ public interface TaskBuilder {
          * @param unit the units of the duration
          * @return a delayed builder
          */
-        @Nonnull
-        ContextualTaskBuilder every(long duration, @Nonnull TimeUnit unit);
+        @NotNull
+        ContextualTaskBuilder every(long duration, @NotNull TimeUnit unit);
 
     }
 
@@ -179,7 +179,7 @@ public interface TaskBuilder {
          * @param ticks the number of ticks to wait between executions
          * @return a delayed builder
          */
-        @Nonnull
+        @NotNull
         ContextualTaskBuilder every(long ticks);
 
     }
@@ -194,7 +194,7 @@ public interface TaskBuilder {
          * @param unit the units of the duration
          * @return a delayed builder
          */
-        @Nonnull
+        @NotNull
         ContextualTaskBuilder every(long duration, TimeUnit unit);
 
     }

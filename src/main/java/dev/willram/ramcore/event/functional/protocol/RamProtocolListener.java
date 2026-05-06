@@ -32,7 +32,7 @@ import dev.willram.ramcore.event.ProtocolSubscription;
 import dev.willram.ramcore.protocol.Protocol;
 import dev.willram.ramcore.utils.LoaderUtils;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -136,7 +136,7 @@ class RamProtocolListener extends PacketAdapter implements ProtocolSubscription 
         }
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Set<PacketType> getPackets() {
         return this.types;

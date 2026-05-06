@@ -32,7 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import dev.willram.ramcore.event.ProtocolSubscription;
 import dev.willram.ramcore.event.functional.ExpiryTestStage;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -57,9 +57,9 @@ class ProtocolSubscriptionBuilderImpl implements ProtocolSubscriptionBuilder {
         this.priority = priority;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public ProtocolSubscriptionBuilder expireIf(@Nonnull BiPredicate<ProtocolSubscription, PacketEvent> predicate, @Nonnull ExpiryTestStage... testPoints) {
+    public ProtocolSubscriptionBuilder expireIf(@NotNull BiPredicate<ProtocolSubscription, PacketEvent> predicate, @NotNull ExpiryTestStage... testPoints) {
         Objects.requireNonNull(testPoints, "testPoints");
         Objects.requireNonNull(predicate, "predicate");
         for (ExpiryTestStage testPoint : testPoints) {
@@ -80,23 +80,23 @@ class ProtocolSubscriptionBuilderImpl implements ProtocolSubscriptionBuilder {
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public ProtocolSubscriptionBuilder filter(@Nonnull Predicate<PacketEvent> predicate) {
+    public ProtocolSubscriptionBuilder filter(@NotNull Predicate<PacketEvent> predicate) {
         Objects.requireNonNull(predicate, "predicate");
         this.filters.add(predicate);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public ProtocolSubscriptionBuilder exceptionConsumer(@Nonnull BiConsumer<? super PacketEvent, Throwable> exceptionConsumer) {
+    public ProtocolSubscriptionBuilder exceptionConsumer(@NotNull BiConsumer<? super PacketEvent, Throwable> exceptionConsumer) {
         Objects.requireNonNull(exceptionConsumer, "exceptionConsumer");
         this.exceptionConsumer = exceptionConsumer;
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public ProtocolHandlerList handlers() {
         return new ProtocolHandlerListImpl(this);

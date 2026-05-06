@@ -30,7 +30,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -50,32 +50,32 @@ class ComposedCooldownMapImpl<I, O> implements ComposedCooldownMap<I, O> {
                 .expireAfterAccess(base.getTimeout() + 10000L, TimeUnit.MILLISECONDS)
                 .build(new CacheLoader<O, Cooldown>() {
                     @Override
-                    public Cooldown load(@Nonnull O key) {
+                    public Cooldown load(@NotNull O key) {
                         return base.copy();
                     }
                 });
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Cooldown getBase() {
         return this.base;
     }
 
-    @Nonnull
-    public Cooldown get(@Nonnull I key) {
+    @NotNull
+    public Cooldown get(@NotNull I key) {
         Objects.requireNonNull(key, "key");
         return this.cache.getUnchecked(this.composeFunction.apply(key));
     }
 
     @Override
-    public void put(@Nonnull O key, @Nonnull Cooldown cooldown) {
+    public void put(@NotNull O key, @NotNull Cooldown cooldown) {
         Objects.requireNonNull(key, "key");
         Preconditions.checkArgument(cooldown.getTimeout() == this.base.getTimeout(), "different timeout");
         this.cache.put(key, cooldown);
     }
 
-    @Nonnull
+    @NotNull
     public Map<O, Cooldown> getAll() {
         return this.cache.asMap();
     }

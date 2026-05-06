@@ -29,7 +29,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -46,25 +46,25 @@ public class AbstractMetadataRegistry<T> implements MetadataRegistry<T> {
         return (CacheLoader) LOADER;
     }
 
-    @Nonnull
+    @NotNull
     protected final LoadingCache<T, MetadataMap> cache = CacheBuilder.newBuilder().build(getLoader());
 
-    @Nonnull
+    @NotNull
     @Override
-    public MetadataMap provide(@Nonnull T id) {
+    public MetadataMap provide(@NotNull T id) {
         Objects.requireNonNull(id, "id");
         return this.cache.getUnchecked(id);
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Optional<MetadataMap> get(@Nonnull T id) {
+    public Optional<MetadataMap> get(@NotNull T id) {
         Objects.requireNonNull(id, "id");
         return Optional.ofNullable(this.cache.getIfPresent(id));
     }
 
     @Override
-    public void remove(@Nonnull T id) {
+    public void remove(@NotNull T id) {
         MetadataMap map = this.cache.asMap().remove(id);
         if (map != null) {
             map.clear();
@@ -79,7 +79,7 @@ public class AbstractMetadataRegistry<T> implements MetadataRegistry<T> {
 
     private static final class Loader<T> extends CacheLoader<T, MetadataMap> {
         @Override
-        public MetadataMap load(@Nonnull T key) {
+        public MetadataMap load(@NotNull T key) {
             return MetadataMap.create();
         }
     }

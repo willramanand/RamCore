@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.scoreboard;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * An object which provides {@link Scoreboard} instances.
@@ -37,7 +37,7 @@ public interface ScoreboardProvider {
      *
      * @return the scoreboard
      */
-    @Nonnull
+    @NotNull
     Scoreboard getScoreboard();
 
 }

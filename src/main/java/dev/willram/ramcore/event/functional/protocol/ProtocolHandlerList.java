@@ -30,22 +30,22 @@ import dev.willram.ramcore.event.ProtocolSubscription;
 import dev.willram.ramcore.event.functional.FunctionalHandlerList;
 import dev.willram.ramcore.interfaces.Delegates;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface ProtocolHandlerList extends FunctionalHandlerList<PacketEvent, ProtocolSubscription> {
 
-    @Nonnull
+    @NotNull
     @Override
-    default ProtocolHandlerList consumer(@Nonnull Consumer<? super PacketEvent> handler) {
+    default ProtocolHandlerList consumer(@NotNull Consumer<? super PacketEvent> handler) {
         Objects.requireNonNull(handler, "handler");
         return biConsumer(Delegates.consumerToBiConsumerSecond(handler));
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    ProtocolHandlerList biConsumer(@Nonnull BiConsumer<ProtocolSubscription, ? super PacketEvent> handler);
+    ProtocolHandlerList biConsumer(@NotNull BiConsumer<ProtocolSubscription, ? super PacketEvent> handler);
     
 }

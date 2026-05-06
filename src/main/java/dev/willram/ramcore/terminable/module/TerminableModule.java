@@ -26,7 +26,7 @@
 package dev.willram.ramcore.terminable.module;
 import dev.willram.ramcore.terminable.TerminableConsumer;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A terminable module is a class which manipulates and constructs a number
@@ -39,14 +39,14 @@ public interface TerminableModule {
      *
      * @param consumer the terminable consumer
      */
-    void setup(@Nonnull TerminableConsumer consumer);
+    void setup(@NotNull TerminableConsumer consumer);
 
     /**
      * Registers this terminable with a terminable consumer
      *
      * @param consumer the terminable consumer
      */
-    default void bindModuleWith(@Nonnull TerminableConsumer consumer) {
+    default void bindModuleWith(@NotNull TerminableConsumer consumer) {
         consumer.bindModule(this);
     }
 

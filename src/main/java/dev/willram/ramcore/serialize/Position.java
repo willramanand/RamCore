@@ -38,8 +38,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
@@ -185,7 +185,7 @@ public final class Position implements GsonSerializable {
         return Point.of(this, direction);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

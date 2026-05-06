@@ -30,21 +30,21 @@ import dev.willram.ramcore.event.MergedSubscription;
 import dev.willram.ramcore.event.functional.FunctionalHandlerList;
 import dev.willram.ramcore.interfaces.Delegates;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface MergedHandlerList<T> extends FunctionalHandlerList<T, MergedSubscription<T>> {
 
-    @Nonnull
+    @NotNull
     @Override
-    default MergedHandlerList<T> consumer(@Nonnull Consumer<? super T> handler) {
+    default MergedHandlerList<T> consumer(@NotNull Consumer<? super T> handler) {
         Objects.requireNonNull(handler, "handler");
         return biConsumer(Delegates.consumerToBiConsumerSecond(handler));
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    MergedHandlerList<T> biConsumer(@Nonnull BiConsumer<MergedSubscription<T>, ? super T> handler);
+    MergedHandlerList<T> biConsumer(@NotNull BiConsumer<MergedSubscription<T>, ? super T> handler);
 }

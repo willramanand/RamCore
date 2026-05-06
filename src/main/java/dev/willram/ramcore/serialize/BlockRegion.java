@@ -32,7 +32,7 @@ import dev.willram.ramcore.gson.GsonSerializable;
 import dev.willram.ramcore.gson.JsonBuilder;
 import org.bukkit.block.Block;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 /**
@@ -115,7 +115,7 @@ public final class BlockRegion implements GsonSerializable {
         return this.depth;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

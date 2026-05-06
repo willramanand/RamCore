@@ -31,12 +31,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import dev.willram.ramcore.exception.RamExceptions;
 import dev.willram.ramcore.interfaces.Delegate;
 import dev.willram.ramcore.scheduler.RamExecutors;
+import dev.willram.ramcore.scheduler.Schedulers;
 import dev.willram.ramcore.scheduler.Ticks;
-import dev.willram.ramcore.utils.LoaderUtils;
-import org.bukkit.Bukkit;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -50,23 +49,23 @@ import java.util.function.Supplier;
  */
 final class RamPromise<V> implements Promise<V> {
 
-    @Nonnull
+    @NotNull
     static <U> RamPromise<U> empty() {
         return new RamPromise<>();
     }
 
-    @Nonnull
+    @NotNull
     static <U> RamPromise<U> completed(@Nullable U value) {
         return new RamPromise<>(value);
     }
 
-    @Nonnull
-    static <U> RamPromise<U> exceptionally(@Nonnull Throwable t) {
+    @NotNull
+    static <U> RamPromise<U> exceptionally(@NotNull Throwable t) {
         return new RamPromise<>(t);
     }
 
-    @Nonnull
-    static <U> Promise<U> wrapFuture(@Nonnull Future<U> future) {
+    @NotNull
+    static <U> Promise<U> wrapFuture(@NotNull Future<U> future) {
         if (future instanceof CompletableFuture<?>) {
             return new RamPromise<>(((CompletableFuture<U>) future).thenApply(Function.identity()));
 
@@ -87,7 +86,7 @@ final class RamPromise<V> implements Promise<V> {
                 }
 
                 @Override
-                public void onFailure(@Nonnull Throwable t) {
+                public void onFailure(@NotNull Throwable t) {
                     promise.completeExceptionally(t);
                 }
             }, RamExecutors.sync());
@@ -122,7 +121,7 @@ final class RamPromise<V> implements Promise<V> {
     /**
      * The completable future backing this promise
      */
-    @Nonnull
+    @NotNull
     private final CompletableFuture<V> fut;
 
     private RamPromise() {
@@ -134,12 +133,12 @@ final class RamPromise<V> implements Promise<V> {
         this.supplied.set(true);
     }
 
-    private RamPromise(@Nonnull Throwable t) {
+    private RamPromise(@NotNull Throwable t) {
         (this.fut = new CompletableFuture<>()).completeExceptionally(t);
         this.supplied.set(true);
     }
 
-    private RamPromise(@Nonnull CompletableFuture<V> fut) {
+    private RamPromise(@NotNull CompletableFuture<V> fut) {
         this.fut = Objects.requireNonNull(fut, "future");
         this.supplied.set(true);
         this.cancelled.set(fut.isCancelled());
@@ -147,47 +146,47 @@ final class RamPromise<V> implements Promise<V> {
 
     /* utility methods */
 
-    private void executeSync(@Nonnull Runnable runnable) {
-        if (ThreadContext.forCurrentThread() == ThreadContext.SYNC) {
+    private void executeSync(@NotNull Runnable runnable) {
+        if (Schedulers.isSyncThread()) {
             RamExceptions.wrapSchedulerTask(runnable).run();
         } else {
-            RamExecutors.sync().execute(runnable);
+            Schedulers.sync().execute(runnable);
         }
     }
 
-    private void executeAsync(@Nonnull Runnable runnable) {
-        RamExecutors.asyncHelper().execute(runnable);
+    private void executeAsync(@NotNull Runnable runnable) {
+        Schedulers.async().execute(runnable);
     }
 
-    private void executeDelayedSync(@Nonnull Runnable runnable, long delayTicks) {
+    private void executeDelayedSync(@NotNull Runnable runnable, long delayTicks) {
         if (delayTicks <= 0) {
             executeSync(runnable);
         } else {
-            Bukkit.getScheduler().runTaskLater(LoaderUtils.getPlugin(), RamExceptions.wrapSchedulerTask(runnable), delayTicks);
+            Schedulers.executeDelayedSync(runnable, delayTicks);
         }
     }
 
-    private void executeDelayedAsync(@Nonnull Runnable runnable, long delayTicks) {
+    private void executeDelayedAsync(@NotNull Runnable runnable, long delayTicks) {
         if (delayTicks <= 0) {
             executeAsync(runnable);
         } else {
-            Bukkit.getScheduler().runTaskLaterAsynchronously(LoaderUtils.getPlugin(), RamExceptions.wrapSchedulerTask(runnable), delayTicks);
+            Schedulers.executeDelayedAsync(runnable, delayTicks);
         }
     }
 
-    private void executeDelayedSync(@Nonnull Runnable runnable, long delay, TimeUnit unit) {
+    private void executeDelayedSync(@NotNull Runnable runnable, long delay, TimeUnit unit) {
         if (delay <= 0) {
             executeSync(runnable);
         } else {
-            Bukkit.getScheduler().runTaskLater(LoaderUtils.getPlugin(), RamExceptions.wrapSchedulerTask(runnable), Ticks.from(delay, unit));
+            Schedulers.executeDelayedSync(runnable, Ticks.from(delay, unit));
         }
     }
 
-    private void executeDelayedAsync(@Nonnull Runnable runnable, long delay, TimeUnit unit) {
+    private void executeDelayedAsync(@NotNull Runnable runnable, long delay, TimeUnit unit) {
         if (delay <= 0) {
             executeAsync(runnable);
         } else {
-            RamExecutors.asyncHelper().schedule(RamExceptions.wrapSchedulerTask(runnable), delay, unit);
+            Schedulers.executeDelayedAsync(runnable, delay, unit);
         }
     }
 
@@ -195,7 +194,7 @@ final class RamPromise<V> implements Promise<V> {
         return !this.cancelled.get() && this.fut.complete(value);
     }
 
-    private boolean completeExceptionally(@Nonnull Throwable t) {
+    private boolean completeExceptionally(@NotNull Throwable t) {
         return !this.cancelled.get() && this.fut.completeExceptionally(t);
     }
 
@@ -229,7 +228,7 @@ final class RamPromise<V> implements Promise<V> {
     }
 
     @Override
-    public V get(long timeout, @Nonnull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public V get(long timeout, @NotNull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         return this.fut.get(timeout, unit);
     }
 
@@ -260,7 +259,7 @@ final class RamPromise<V> implements Promise<V> {
 
     /* implementation */
 
-    @Nonnull
+    @NotNull
     @Override
     public Promise<V> supply(@Nullable V value) {
         markAsSupplied();
@@ -268,113 +267,113 @@ final class RamPromise<V> implements Promise<V> {
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyException(@Nonnull Throwable exception) {
+    public Promise<V> supplyException(@NotNull Throwable exception) {
         markAsSupplied();
         completeExceptionally(exception);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplySync(@Nonnull Supplier<V> supplier) {
+    public Promise<V> supplySync(@NotNull Supplier<V> supplier) {
         markAsSupplied();
         executeSync(new SupplyRunnable(supplier));
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyAsync(@Nonnull Supplier<V> supplier) {
+    public Promise<V> supplyAsync(@NotNull Supplier<V> supplier) {
         markAsSupplied();
         executeAsync(new SupplyRunnable(supplier));
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyDelayedSync(@Nonnull Supplier<V> supplier, long delayTicks) {
+    public Promise<V> supplyDelayedSync(@NotNull Supplier<V> supplier, long delayTicks) {
         markAsSupplied();
         executeDelayedSync(new SupplyRunnable(supplier), delayTicks);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyDelayedSync(@Nonnull Supplier<V> supplier, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> supplyDelayedSync(@NotNull Supplier<V> supplier, long delay, @NotNull TimeUnit unit) {
         markAsSupplied();
         executeDelayedSync(new SupplyRunnable(supplier), delay, unit);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyDelayedAsync(@Nonnull Supplier<V> supplier, long delayTicks) {
+    public Promise<V> supplyDelayedAsync(@NotNull Supplier<V> supplier, long delayTicks) {
         markAsSupplied();
         executeDelayedAsync(new SupplyRunnable(supplier), delayTicks);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyDelayedAsync(@Nonnull Supplier<V> supplier, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> supplyDelayedAsync(@NotNull Supplier<V> supplier, long delay, @NotNull TimeUnit unit) {
         markAsSupplied();
         executeDelayedAsync(new SupplyRunnable(supplier), delay, unit);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallySync(@Nonnull Callable<V> callable) {
+    public Promise<V> supplyExceptionallySync(@NotNull Callable<V> callable) {
         markAsSupplied();
         executeSync(new ThrowingSupplyRunnable(callable));
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallyAsync(@Nonnull Callable<V> callable) {
+    public Promise<V> supplyExceptionallyAsync(@NotNull Callable<V> callable) {
         markAsSupplied();
         executeAsync(new ThrowingSupplyRunnable(callable));
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallyDelayedSync(@Nonnull Callable<V> callable, long delayTicks) {
+    public Promise<V> supplyExceptionallyDelayedSync(@NotNull Callable<V> callable, long delayTicks) {
         markAsSupplied();
         executeDelayedSync(new ThrowingSupplyRunnable(callable), delayTicks);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallyDelayedSync(@Nonnull Callable<V> callable, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> supplyExceptionallyDelayedSync(@NotNull Callable<V> callable, long delay, @NotNull TimeUnit unit) {
         markAsSupplied();
         executeDelayedSync(new ThrowingSupplyRunnable(callable), delay, unit);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallyDelayedAsync(@Nonnull Callable<V> callable, long delayTicks) {
+    public Promise<V> supplyExceptionallyDelayedAsync(@NotNull Callable<V> callable, long delayTicks) {
         markAsSupplied();
         executeDelayedAsync(new ThrowingSupplyRunnable(callable), delayTicks);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> supplyExceptionallyDelayedAsync(@Nonnull Callable<V> callable, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> supplyExceptionallyDelayedAsync(@NotNull Callable<V> callable, long delay, @NotNull TimeUnit unit) {
         markAsSupplied();
         executeDelayedAsync(new ThrowingSupplyRunnable(callable), delay, unit);
         return this;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplySync(@Nonnull Function<? super V, ? extends U> fn) {
+    public <U> Promise<U> thenApplySync(@NotNull Function<? super V, ? extends U> fn) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -386,9 +385,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplyAsync(@Nonnull Function<? super V, ? extends U> fn) {
+    public <U> Promise<U> thenApplyAsync(@NotNull Function<? super V, ? extends U> fn) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -400,9 +399,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplyDelayedSync(@Nonnull Function<? super V, ? extends U> fn, long delayTicks) {
+    public <U> Promise<U> thenApplyDelayedSync(@NotNull Function<? super V, ? extends U> fn, long delayTicks) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -414,9 +413,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplyDelayedSync(@Nonnull Function<? super V, ? extends U> fn, long delay, @Nonnull TimeUnit unit) {
+    public <U> Promise<U> thenApplyDelayedSync(@NotNull Function<? super V, ? extends U> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -428,9 +427,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplyDelayedAsync(@Nonnull Function<? super V, ? extends U> fn, long delayTicks) {
+    public <U> Promise<U> thenApplyDelayedAsync(@NotNull Function<? super V, ? extends U> fn, long delayTicks) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -442,9 +441,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenApplyDelayedAsync(@Nonnull Function<? super V, ? extends U> fn, long delay, @Nonnull TimeUnit unit) {
+    public <U> Promise<U> thenApplyDelayedAsync(@NotNull Function<? super V, ? extends U> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -456,9 +455,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeSync(@Nonnull Function<? super V, ? extends Promise<U>> fn) {
+    public <U> Promise<U> thenComposeSync(@NotNull Function<? super V, ? extends Promise<U>> fn) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -470,9 +469,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeAsync(@Nonnull Function<? super V, ? extends Promise<U>> fn) {
+    public <U> Promise<U> thenComposeAsync(@NotNull Function<? super V, ? extends Promise<U>> fn) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -484,9 +483,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeDelayedSync(@Nonnull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
+    public <U> Promise<U> thenComposeDelayedSync(@NotNull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -498,9 +497,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeDelayedSync(@Nonnull Function<? super V, ? extends Promise<U>> fn, long delay, @Nonnull TimeUnit unit) {
+    public <U> Promise<U> thenComposeDelayedSync(@NotNull Function<? super V, ? extends Promise<U>> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -512,9 +511,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeDelayedAsync(@Nonnull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
+    public <U> Promise<U> thenComposeDelayedAsync(@NotNull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -526,9 +525,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <U> Promise<U> thenComposeDelayedAsync(@Nonnull Function<? super V, ? extends Promise<U>> fn, long delay, @Nonnull TimeUnit unit) {
+    public <U> Promise<U> thenComposeDelayedAsync(@NotNull Function<? super V, ? extends Promise<U>> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<U> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t != null) {
@@ -540,9 +539,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallySync(@Nonnull Function<Throwable, ? extends V> fn) {
+    public Promise<V> exceptionallySync(@NotNull Function<Throwable, ? extends V> fn) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -554,9 +553,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallyAsync(@Nonnull Function<Throwable, ? extends V> fn) {
+    public Promise<V> exceptionallyAsync(@NotNull Function<Throwable, ? extends V> fn) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -568,9 +567,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallyDelayedSync(@Nonnull Function<Throwable, ? extends V> fn, long delayTicks) {
+    public Promise<V> exceptionallyDelayedSync(@NotNull Function<Throwable, ? extends V> fn, long delayTicks) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -582,9 +581,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallyDelayedSync(@Nonnull Function<Throwable, ? extends V> fn, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> exceptionallyDelayedSync(@NotNull Function<Throwable, ? extends V> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -596,9 +595,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallyDelayedAsync(@Nonnull Function<Throwable, ? extends V> fn, long delayTicks) {
+    public Promise<V> exceptionallyDelayedAsync(@NotNull Function<Throwable, ? extends V> fn, long delayTicks) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -610,9 +609,9 @@ final class RamPromise<V> implements Promise<V> {
         return promise;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public Promise<V> exceptionallyDelayedAsync(@Nonnull Function<Throwable, ? extends V> fn, long delay, @Nonnull TimeUnit unit) {
+    public Promise<V> exceptionallyDelayedAsync(@NotNull Function<Throwable, ? extends V> fn, long delay, @NotNull TimeUnit unit) {
         RamPromise<V> promise = empty();
         this.fut.whenComplete((value, t) -> {
             if (t == null) {
@@ -716,11 +715,13 @@ final class RamPromise<V> implements Promise<V> {
                 if (p == null) {
                     this.promise.complete(null);
                 } else {
-                    if (this.sync) {
-                        p.thenAcceptSync(this.promise::complete);
-                    } else {
-                        p.thenAcceptAsync(this.promise::complete);
-                    }
+                    p.toCompletableFuture().whenComplete((value, throwable) -> {
+                        if (throwable != null) {
+                            this.promise.completeExceptionally(throwable);
+                        } else {
+                            this.promise.complete(value);
+                        }
+                    });
                 }
             } catch (Throwable t) {
                 RamExceptions.reportPromise(t);

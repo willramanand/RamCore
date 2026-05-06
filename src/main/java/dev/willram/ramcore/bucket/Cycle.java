@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.bucket;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
@@ -44,8 +44,8 @@ public interface Cycle<E> {
      * @param <E> the element type
      * @return the cycle
      */
-    @Nonnull
-    static <E> Cycle<E> of(@Nonnull List<E> objects) {
+    @NotNull
+    static <E> Cycle<E> of(@NotNull List<E> objects) {
         //noinspection deprecation
         return new CycleImpl<>(objects);
     }
@@ -71,7 +71,7 @@ public interface Cycle<E> {
      *
      * @return the current element
      */
-    @Nonnull
+    @NotNull
     E current();
 
     /**
@@ -79,7 +79,7 @@ public interface Cycle<E> {
      *
      * @return the next element
      */
-    @Nonnull
+    @NotNull
     E next();
 
     /**
@@ -87,7 +87,7 @@ public interface Cycle<E> {
      *
      * @return the previous element
      */
-    @Nonnull
+    @NotNull
     E previous();
 
     /**
@@ -109,7 +109,7 @@ public interface Cycle<E> {
      *
      * @return the next element
      */
-    @Nonnull
+    @NotNull
     E peekNext();
 
     /**
@@ -117,7 +117,7 @@ public interface Cycle<E> {
      *
      * @return the previous element
      */
-    @Nonnull
+    @NotNull
     E peekPrevious();
 
     /**
@@ -127,7 +127,7 @@ public interface Cycle<E> {
      *
      * @return the backing list
      */
-    @Nonnull
+    @NotNull
     List<E> getBacking();
 
     /**

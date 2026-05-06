@@ -45,13 +45,12 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.*;
 import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Easily construct {@link ItemStack} instances
  */
-@Nonnull
 public final class ItemStackBuilder {
     private static final ItemFlag[] ALL_FLAGS = new ItemFlag[]{
             ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,

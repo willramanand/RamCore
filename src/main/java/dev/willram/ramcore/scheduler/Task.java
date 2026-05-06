@@ -28,12 +28,11 @@ package dev.willram.ramcore.scheduler;
 
 import dev.willram.ramcore.terminable.Terminable;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a scheduled repeating task
  */
-@Nonnull
 public interface Task extends Terminable {
 
     /**

@@ -98,28 +98,39 @@ final class RamAsyncExecutor extends AbstractExecutorService implements Schedule
 
     @Override
     public void shutdown() {
-        // noop
+        cancelRepeatingTasks();
+        this.timerExecutionService.shutdown();
+        this.taskService.shutdown();
     }
 
     @Override
     public List<Runnable> shutdownNow() {
-        // noop
-        return Collections.emptyList();
+        cancelRepeatingTasks();
+        List<Runnable> timerTasks = this.timerExecutionService.shutdownNow();
+        List<Runnable> tasks = this.taskService.shutdownNow();
+        timerTasks.addAll(tasks);
+        return timerTasks;
     }
 
     @Override
     public boolean isShutdown() {
-        return false;
+        return this.timerExecutionService.isShutdown() && this.taskService.isShutdown();
     }
 
     @Override
     public boolean isTerminated() {
-        return false;
+        return this.timerExecutionService.isTerminated() && this.taskService.isTerminated();
     }
 
     @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) {
-        throw new IllegalStateException("Not shutdown");
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        if (!this.timerExecutionService.awaitTermination(timeout, unit)) {
+            return false;
+        }
+
+        long remaining = deadline - System.nanoTime();
+        return remaining > 0 && this.taskService.awaitTermination(remaining, TimeUnit.NANOSECONDS);
     }
 
     private final class FixedRateWorker implements Runnable {

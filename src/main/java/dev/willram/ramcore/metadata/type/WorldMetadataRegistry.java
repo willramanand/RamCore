@@ -30,7 +30,7 @@ import dev.willram.ramcore.metadata.MetadataMap;
 import dev.willram.ramcore.metadata.MetadataRegistry;
 import org.bukkit.World;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,8 +46,8 @@ public interface WorldMetadataRegistry extends MetadataRegistry<UUID> {
      * @param world the world
      * @return a metadata map
      */
-    @Nonnull
-    MetadataMap provide(@Nonnull World world);
+    @NotNull
+    MetadataMap provide(@NotNull World world);
 
     /**
      * Gets a {@link MetadataMap} for the given world, if one already exists and has
@@ -56,8 +56,8 @@ public interface WorldMetadataRegistry extends MetadataRegistry<UUID> {
      * @param world the world
      * @return a metadata map, if present
      */
-    @Nonnull
-    Optional<MetadataMap> get(@Nonnull World world);
+    @NotNull
+    Optional<MetadataMap> get(@NotNull World world);
 
     /**
      * Gets a map of the worlds with a given metadata key
@@ -66,7 +66,7 @@ public interface WorldMetadataRegistry extends MetadataRegistry<UUID> {
      * @param <K> the key type
      * @return an immutable map of worlds to key value
      */
-    @Nonnull
-    <K> Map<World, K> getAllWithKey(@Nonnull MetadataKey<K> key);
+    @NotNull
+    <K> Map<World, K> getAllWithKey(@NotNull MetadataKey<K> key);
 
 }

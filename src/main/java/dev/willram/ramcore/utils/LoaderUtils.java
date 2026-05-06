@@ -35,7 +35,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Provides the instance which loaded the helper classes into the server
@@ -44,7 +44,7 @@ public final class LoaderUtils {
     private static RamPlugin plugin = null;
     private static Thread mainThread = null;
 
-    @Nonnull
+    @NotNull
     public static synchronized RamPlugin getPlugin() {
         if (plugin == null) {
             JavaPlugin pl = JavaPlugin.getProvidingPlugin(LoaderUtils.class);
@@ -81,7 +81,7 @@ public final class LoaderUtils {
         ).collect(Collectors.toSet());
     }
 
-    @Nonnull
+    @NotNull
     public static synchronized Thread getMainThread() {
         if (mainThread == null) {
             if (Bukkit.getServer().isPrimaryThread()) {

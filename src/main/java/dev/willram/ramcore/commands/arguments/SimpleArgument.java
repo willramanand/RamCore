@@ -27,10 +27,9 @@ package dev.willram.ramcore.commands.arguments;
 
 import java.util.Optional;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-@Nonnull
 public class SimpleArgument implements Argument {
     protected final int index;
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -46,7 +45,7 @@ public class SimpleArgument implements Argument {
         return this.index;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Optional<String> value() {
         return this.value;

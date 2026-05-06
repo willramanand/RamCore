@@ -27,7 +27,7 @@ package dev.willram.ramcore.random;
 
 import com.google.common.base.Preconditions;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 /**
@@ -37,8 +37,8 @@ import java.util.Objects;
  */
 public final class WeightedObject<T> implements Weighted {
 
-    @Nonnull
-    public static <T> WeightedObject<T> of(@Nonnull T object, double weight) {
+    @NotNull
+    public static <T> WeightedObject<T> of(@NotNull T object, double weight) {
         return new WeightedObject<>(object, weight);
     }
 
@@ -51,7 +51,7 @@ public final class WeightedObject<T> implements Weighted {
         this.weight = weight;
     }
 
-    @Nonnull
+    @NotNull
     public T get() {
         return this.object;
     }

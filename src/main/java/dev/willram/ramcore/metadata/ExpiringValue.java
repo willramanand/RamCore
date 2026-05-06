@@ -27,7 +27,7 @@ package dev.willram.ramcore.metadata;
 
 import com.google.common.base.Preconditions;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;

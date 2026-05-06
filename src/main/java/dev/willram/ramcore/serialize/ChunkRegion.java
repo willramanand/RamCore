@@ -31,7 +31,7 @@ import com.google.gson.JsonObject;
 import dev.willram.ramcore.gson.GsonSerializable;
 import dev.willram.ramcore.gson.JsonBuilder;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 
 /**
@@ -102,7 +102,7 @@ public final class ChunkRegion implements GsonSerializable {
         return this.depth;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

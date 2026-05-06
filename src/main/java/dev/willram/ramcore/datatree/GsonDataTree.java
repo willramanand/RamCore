@@ -29,7 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -45,9 +45,9 @@ public class GsonDataTree implements DataTree {
         return this.element;
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public GsonDataTree resolve(@Nonnull Object... path) {
+    public GsonDataTree resolve(@NotNull Object... path) {
         if (path.length == 0) {
             return this;
         }
@@ -72,21 +72,21 @@ public class GsonDataTree implements DataTree {
         return new GsonDataTree(o);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<Map.Entry<String, GsonDataTree>> asObject() {
         return this.element.getAsJsonObject().entrySet().stream()
                 .map(entry -> Maps.immutableEntry(entry.getKey(), new GsonDataTree(entry.getValue())));
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<GsonDataTree> asArray() {
         return StreamSupport.stream(this.element.getAsJsonArray().spliterator(), false)
                 .map(GsonDataTree::new);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Stream<Map.Entry<Integer, GsonDataTree>> asIndexedArray() {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new Iterator<Map.Entry<Integer, GsonDataTree>>() {
@@ -105,13 +105,13 @@ public class GsonDataTree implements DataTree {
         }, Spliterator.ORDERED | Spliterator.IMMUTABLE), false);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public String asString() {
         return this.element.getAsString();
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Number asNumber() {
         return this.element.getAsNumber();

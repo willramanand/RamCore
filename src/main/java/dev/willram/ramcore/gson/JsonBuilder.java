@@ -27,7 +27,7 @@ package dev.willram.ramcore.gson;
 
 import com.google.gson.*;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;

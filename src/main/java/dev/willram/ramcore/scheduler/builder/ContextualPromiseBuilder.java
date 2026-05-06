@@ -27,7 +27,7 @@ package dev.willram.ramcore.scheduler.builder;
 
 import dev.willram.ramcore.promise.Promise;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
@@ -37,13 +37,13 @@ import java.util.function.Supplier;
  */
 public interface ContextualPromiseBuilder {
 
-    @Nonnull
-    <T> Promise<T> supply(@Nonnull Supplier<T> supplier);
+    @NotNull
+    <T> Promise<T> supply(@NotNull Supplier<T> supplier);
 
-    @Nonnull
-    <T> Promise<T> call(@Nonnull Callable<T> callable);
+    @NotNull
+    <T> Promise<T> call(@NotNull Callable<T> callable);
 
-    @Nonnull
-    Promise<Void> run(@Nonnull Runnable runnable);
+    @NotNull
+    Promise<Void> run(@NotNull Runnable runnable);
 
 }

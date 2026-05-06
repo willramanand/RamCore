@@ -27,7 +27,7 @@ package dev.willram.ramcore.commands.arguments;
 
 import dev.willram.ramcore.commands.CommandInterruptException;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -36,7 +36,6 @@ import java.util.function.Function;
  *
  * @param <T> the value type
  */
-@Nonnull
 public interface ArgumentParser<T> {
 
     static <T> ArgumentParser<T> of(Function<String, Optional<T>> parseFunction) {
@@ -46,12 +45,12 @@ public interface ArgumentParser<T> {
     static <T> ArgumentParser<T> of(Function<String, Optional<T>> parseFunction, Function<String, CommandInterruptException> generateExceptionFunction) {
         return new ArgumentParser<T>() {
             @Override
-            public Optional<T> parse(@Nonnull String t) {
+            public Optional<T> parse(@NotNull String t) {
                 return parseFunction.apply(t);
             }
 
             @Override
-            public CommandInterruptException generateException(@Nonnull String s) {
+            public CommandInterruptException generateException(@NotNull String s) {
                 return generateExceptionFunction.apply(s);
             }
         };
@@ -63,7 +62,7 @@ public interface ArgumentParser<T> {
      * @param s the string
      * @return the value, if parsing was successful
      */
-    Optional<T> parse(@Nonnull String s);
+    Optional<T> parse(@NotNull String s);
 
     /**
      * Generates a {@link CommandInterruptException} for when parsing fails with the given content.
@@ -71,7 +70,7 @@ public interface ArgumentParser<T> {
      * @param s the string input
      * @return the exception
      */
-    default CommandInterruptException generateException(@Nonnull String s) {
+    default CommandInterruptException generateException(@NotNull String s) {
         return new CommandInterruptException("&cUnable to parse argument: " + s);
     }
 
@@ -92,8 +91,8 @@ public interface ArgumentParser<T> {
      * @param s the string
      * @return the value
      */
-    @Nonnull
-    default T parseOrFail(@Nonnull String s) throws CommandInterruptException {
+    @NotNull
+    default T parseOrFail(@NotNull String s) throws CommandInterruptException {
         Optional<T> ret = parse(s);
         if (!ret.isPresent()) {
             throw generateException(s);
@@ -107,8 +106,8 @@ public interface ArgumentParser<T> {
      * @param argument the argument
      * @return the value, if parsing was successful
      */
-    @Nonnull
-    default Optional<T> parse(@Nonnull Argument argument) {
+    @NotNull
+    default Optional<T> parse(@NotNull Argument argument) {
         return argument.value().flatMap(this::parse);
     }
 
@@ -119,8 +118,8 @@ public interface ArgumentParser<T> {
      * @param argument the argument
      * @return the value
      */
-    @Nonnull
-    default T parseOrFail(@Nonnull Argument argument) throws CommandInterruptException {
+    @NotNull
+    default T parseOrFail(@NotNull Argument argument) throws CommandInterruptException {
         Optional<String> value = argument.value();
         if (!value.isPresent()) {
             throw generateException(argument.index());
@@ -135,8 +134,8 @@ public interface ArgumentParser<T> {
      * @param other the other parser
      * @return the combined parser
      */
-    @Nonnull
-    default ArgumentParser<T> thenTry(@Nonnull ArgumentParser<T> other) {
+    @NotNull
+    default ArgumentParser<T> thenTry(@NotNull ArgumentParser<T> other) {
         ArgumentParser<T> first = this;
         return t -> {
             Optional<T> ret = first.parse(t);

@@ -27,7 +27,7 @@ package dev.willram.ramcore.event;
 
 import com.comphenix.protocol.PacketType;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Set;
 
 /**
@@ -40,7 +40,7 @@ public interface ProtocolSubscription extends Subscription {
      *
      * @return the types
      */
-    @Nonnull
+    @NotNull
     Set<PacketType> getPackets();
 
 }

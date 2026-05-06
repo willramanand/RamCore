@@ -37,7 +37,7 @@ import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.Plugin;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -204,13 +204,13 @@ class RamMergedEventListener<T> implements MergedSubscription<T>, EventExecutor,
         return functions;
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Class<? super T> getHandledClass() {
         return this.handledClass.getRawType();
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public Set<Class<? extends Event>> getEventClasses() {
         return this.mappings.keySet();

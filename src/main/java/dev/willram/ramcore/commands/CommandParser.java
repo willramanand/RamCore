@@ -10,7 +10,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,7 +20,7 @@ public final class CommandParser {
     // Global argument parsers
     private static final ArgumentParserRegistry PARSER_REGISTRY;
 
-    @Nonnull
+    @NotNull
     public static ArgumentParserRegistry parserRegistry() {
         return PARSER_REGISTRY;
     }

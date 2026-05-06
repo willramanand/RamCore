@@ -37,8 +37,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scoreboard.DisplaySlot;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,7 +60,7 @@ public class PacketScoreboard implements Scoreboard {
     private final Map<UUID, Map<String, PacketScoreboardTeam>> playerTeams = Collections.synchronizedMap(new HashMap<>());
     private final Map<UUID, Map<String, PacketScoreboardObjective>> playerObjectives = Collections.synchronizedMap(new HashMap<>());
 
-    public PacketScoreboard(@Nonnull RamPlugin plugin) {
+    public PacketScoreboard(@NotNull RamPlugin plugin) {
         Events.subscribe(PlayerJoinEvent.class).handler(this::handlePlayerJoin).bindWith(plugin);
         Events.subscribe(PlayerQuitEvent.class).handler(this::handlePlayerQuit).bindWith(plugin);
     }

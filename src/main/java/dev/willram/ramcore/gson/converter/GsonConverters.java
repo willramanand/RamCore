@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.gson.converter;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Provides some default {@link GsonConverter}s.
@@ -37,13 +37,13 @@ public class GsonConverters {
     /**
      * An implementation of {@link GsonConverter}, which returns immutable collections where applicable.
      */
-    @Nonnull
+    @NotNull
     public static final GsonConverter IMMUTABLE = ImmutableGsonConverter.INSTANCE;
 
     /**
      * An implementation of {@link GsonConverter}, which returns mutable collections where applicable.
      */
-    @Nonnull
+    @NotNull
     public static final GsonConverter MUTABLE = MutableGsonConverter.INSTANCE;
 
     private GsonConverters() {

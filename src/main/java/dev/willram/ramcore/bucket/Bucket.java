@@ -27,7 +27,7 @@ package dev.willram.ramcore.bucket;
 
 import dev.willram.ramcore.bucket.partitioning.PartitioningStrategy;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Set;
 
@@ -58,7 +58,7 @@ public interface Bucket<E> extends Set<E> {
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt;= getPartitionCount()</tt>)
      */
-    @Nonnull
+    @NotNull
     BucketPartition<E> getPartition(int i);
 
     /**
@@ -66,7 +66,7 @@ public interface Bucket<E> extends Set<E> {
      *
      * @return the partitions within the bucket
      */
-    @Nonnull
+    @NotNull
     List<BucketPartition<E>> getPartitions();
 
     /**
@@ -79,7 +79,7 @@ public interface Bucket<E> extends Set<E> {
      *
      * @return a cycle of partitions
      */
-    @Nonnull
+    @NotNull
     Cycle<BucketPartition<E>> asCycle();
 
 }

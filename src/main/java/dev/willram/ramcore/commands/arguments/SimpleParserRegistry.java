@@ -37,14 +37,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class SimpleParserRegistry implements ArgumentParserRegistry {
     private final Map<TypeToken<?>, List<ArgumentParser<?>>> parsers = new ConcurrentHashMap<>();
 
-    @Nonnull
+    @NotNull
     @Override
-    public <T> Optional<ArgumentParser<T>> find(@Nonnull TypeToken<T> type) {
+    public <T> Optional<ArgumentParser<T>> find(@NotNull TypeToken<T> type) {
         Objects.requireNonNull(type, "type");
         List<ArgumentParser<?>> parsers = this.parsers.get(type);
         if (parsers == null || parsers.isEmpty()) {
@@ -55,9 +55,9 @@ public class SimpleParserRegistry implements ArgumentParserRegistry {
         return Optional.of((ArgumentParser<T>) parsers.get(0));
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <T> Collection<ArgumentParser<T>> findAll(@Nonnull TypeToken<T> type) {
+    public <T> Collection<ArgumentParser<T>> findAll(@NotNull TypeToken<T> type) {
         Objects.requireNonNull(type, "type");
         List<ArgumentParser<?>> parsers = this.parsers.get(type);
         if (parsers == null || parsers.isEmpty()) {
@@ -69,7 +69,7 @@ public class SimpleParserRegistry implements ArgumentParserRegistry {
     }
 
     @Override
-    public <T> void register(@Nonnull TypeToken<T> type, @Nonnull ArgumentParser<T> parser) {
+    public <T> void register(@NotNull TypeToken<T> type, @NotNull ArgumentParser<T> parser) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(parser, "parser");
         List<ArgumentParser<?>> list = this.parsers.computeIfAbsent(type, t -> new CopyOnWriteArrayList<>());

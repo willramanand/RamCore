@@ -1,6 +1,8 @@
 package dev.willram.ramcore;
 
+import dev.willram.ramcore.scheduler.RamExecutors;
 import dev.willram.ramcore.scheduler.Schedulers;
+import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.terminable.TerminableConsumer;
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import dev.willram.ramcore.terminable.module.TerminableModule;
@@ -13,9 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import javax.annotation.Nonnull;
-
-import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.NotNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -36,12 +36,7 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
         this.log("<gold>===</gold><aqua> ENABLE START </aqua><gold>===</gold>");
 
         // schedule cleanup of the registry
-        Schedulers.builder()
-                .async()
-                .after(10, TimeUnit.SECONDS)
-                .every(30, TimeUnit.SECONDS)
-                .run(this.terminableRegistry::cleanup)
-                .bindWith(this.terminableRegistry);
+        Schedulers.runTimer(TaskContext.async(), this.terminableRegistry::cleanup, 200L, 600L, this.terminableRegistry);
 
         LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
@@ -65,6 +60,8 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
 
         // terminate the registry
         this.terminableRegistry.closeAndReportException();
+        Schedulers.shutdown(this);
+        RamExecutors.shutdown();
 
         startTime = Time.nowMillis() - startTime;
         this.log("<gold>=== <red>DISABLE <green>COMPLETE <light_purple>" + startTime + "ms <gold>===");
@@ -80,22 +77,22 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
         Bukkit.getServer().getConsoleSender().sendRichMessage("<gold>[<aqua>"+ this.getName() + "</aqua>]</gold> " + message);
     }
 
-    public <T extends Listener> void registerListener(@Nonnull T listener) {
+    public <T extends Listener> void registerListener(@NotNull T listener) {
         requireNonNull(listener, "listener");
         getServer().getPluginManager().registerEvents(listener, this);
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <T extends AutoCloseable> T bind(@Nonnull T terminable) {
+    public <T extends AutoCloseable> T bind(@NotNull T terminable) {
         return this.terminableRegistry.bind(terminable);
     }
 
-    @Nonnull
+    @NotNull
     @Override
-    public <T extends TerminableModule> T bindModule(@Nonnull T module) {
+    public <T extends TerminableModule> T bindModule(@NotNull T module) {
         return this.terminableRegistry.bindModule(module);
     }
 
-    public abstract void registerCommands(@Nonnull Commands commands);
+    public abstract void registerCommands(@NotNull Commands commands);
 }

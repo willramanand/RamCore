@@ -33,8 +33,8 @@ import dev.willram.ramcore.gson.JsonBuilder;
 import org.bukkit.Location;
 import org.bukkit.World;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
@@ -104,7 +104,7 @@ public final class VectorPoint implements GsonSerializable {
         return Point.of(Position.of(this.position, world), this.direction);
     }
 
-    @Nonnull
+    @NotNull
     @Override
     public JsonObject serialize() {
         return JsonBuilder.object()

@@ -27,7 +27,7 @@ package dev.willram.ramcore.reflect;
 
 import org.bukkit.Bukkit;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Utility methods for working with "versioned" server classes.
@@ -84,7 +84,7 @@ public final class ServerReflection {
      *
      * @return the server packaging version
      */
-    @Nonnull
+    @NotNull
     public static String getServerVersion() {
         return SERVER_VERSION;
     }
@@ -94,7 +94,7 @@ public final class ServerReflection {
      *
      * @return the server packaging version
      */
-    @Nonnull
+    @NotNull
     public static NmsVersion getNmsVersion() {
         return NMS_VERSION;
     }
@@ -105,7 +105,7 @@ public final class ServerReflection {
      * @param className the name of the class
      * @return the full class name
      */
-    @Nonnull
+    @NotNull
     public static String nms(String className) {
         return NMS_VERSION.nms(className);
     }
@@ -116,7 +116,7 @@ public final class ServerReflection {
      * @param className the name of the class
      * @return the class represented by the full class name
      */
-    @Nonnull
+    @NotNull
     public static Class<?> nmsClass(String className) throws ClassNotFoundException {
         return NMS_VERSION.nmsClass(className);
     }
@@ -127,7 +127,7 @@ public final class ServerReflection {
      * @param className the name of the class
      * @return the full class name
      */
-    @Nonnull
+    @NotNull
     public static String obc(String className) {
         return NMS_VERSION.obc(className);
     }
@@ -138,7 +138,7 @@ public final class ServerReflection {
      * @param className the name of the class
      * @return the class represented by the full class name
      */
-    @Nonnull
+    @NotNull
     public static Class<?> obcClass(String className) throws ClassNotFoundException {
         return NMS_VERSION.obcClass(className);
     }

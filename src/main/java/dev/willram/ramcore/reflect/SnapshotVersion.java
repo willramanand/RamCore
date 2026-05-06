@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.reflect;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -53,7 +53,7 @@ public class SnapshotVersion implements Comparable<SnapshotVersion> {
      * @return the parsed version
      * @throws IllegalArgumentException if the version is not a snapshot version
      */
-    @Nonnull
+    @NotNull
     public static SnapshotVersion parse(String version) throws IllegalArgumentException {
         return new SnapshotVersion(version);
     }

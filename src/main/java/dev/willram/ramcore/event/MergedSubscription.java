@@ -27,7 +27,7 @@ package dev.willram.ramcore.event;
 
 import org.bukkit.event.Event;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import java.util.Set;
 
 /**
@@ -42,7 +42,7 @@ public interface MergedSubscription<T> extends Subscription {
      *
      * @return the handled class
      */
-    @Nonnull
+    @NotNull
     Class<? super T> getHandledClass();
 
     /**
@@ -50,7 +50,7 @@ public interface MergedSubscription<T> extends Subscription {
      *
      * @return the individual classes
      */
-    @Nonnull
+    @NotNull
     Set<Class<? extends Event>> getEventClasses();
 
 }

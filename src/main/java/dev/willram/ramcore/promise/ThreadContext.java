@@ -27,6 +27,7 @@ package dev.willram.ramcore.promise;
 
 
 import dev.willram.ramcore.utils.LoaderUtils;
+import dev.willram.ramcore.scheduler.Schedulers;
 
 /**
  * Represents the two main types of {@link Thread} on the server.
@@ -44,7 +45,7 @@ public enum ThreadContext {
     ASYNC;
 
     public static ThreadContext forCurrentThread() {
-        return forThread(Thread.currentThread());
+        return Schedulers.isSyncThread() ? SYNC : ASYNC;
     }
 
     public static ThreadContext forThread(Thread thread) {

@@ -27,7 +27,7 @@ package dev.willram.ramcore.event;
 
 import org.bukkit.event.Event;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a subscription to a single given event.
@@ -41,7 +41,7 @@ public interface SingleSubscription<T extends Event> extends Subscription {
      *
      * @return the class the handler is handling.
      */
-    @Nonnull
+    @NotNull
     Class<T> getEventClass();
 
 }
