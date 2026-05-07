@@ -31,9 +31,10 @@ import java.util.function.Consumer;
 /**
  * Exception thrown when the handling of a command should be interrupted.
  *
- * <p>This exception is silently swallowed by the command processing handler.</p>
+ * <p>This exception is converted into a sender-facing response by the command dispatcher.</p>
  */
 public class CommandInterruptException extends Exception {
+    private static final long serialVersionUID = 1L;
 
     /**
      * Makes an assertion about a condition.
@@ -58,7 +59,7 @@ public class CommandInterruptException extends Exception {
     }
 
     public CommandInterruptException(String message) {
-        this.action = cs -> cs.sendRichMessage(message);
+        this.action = sender -> sender.sendRichMessage(message);
     }
 
     public Consumer<CommandSender> getAction() {

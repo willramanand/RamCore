@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.random;
 
-import javax.annotation.Nonnegative;
+import org.jetbrains.annotations.Range;
 
 /**
  * Represents an object which can determine the weight of objects.
@@ -42,7 +42,7 @@ public interface Weigher<E> {
      * @param element the element to calculate the weight for
      * @return the weight
      */
-    @Nonnegative
+    @Range(from = 0, to = Long.MAX_VALUE)
     double weigh(E element);
 
 }

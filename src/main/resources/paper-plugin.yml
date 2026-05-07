@@ -2,6 +2,7 @@ name: RamCore
 version: '1.0.0-SNAPSHOT'
 main: dev.willram.ramcore.RamCore
 api-version: '1.21'
+folia-supported: true
 dependencies:
   server:
     ProtocolLib:
@@ -9,3 +10,7 @@ dependencies:
       required: false
       # This means that your plugin will not have access to their classpath
       join-classpath: true
+permissions:
+  ramcore.diagnostics:
+    description: Allows use of RamCore diagnostic commands.
+    default: op

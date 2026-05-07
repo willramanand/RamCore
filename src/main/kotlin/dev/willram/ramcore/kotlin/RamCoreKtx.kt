@@ -3,16 +3,20 @@
 package dev.willram.ramcore.kotlin
 
 import com.google.common.reflect.TypeToken
-import dev.willram.ramcore.commands.CommandInterruptException
-import dev.willram.ramcore.commands.arguments.Argument
-import dev.willram.ramcore.commands.arguments.ArgumentParser
-import dev.willram.ramcore.commands.arguments.ArgumentParserRegistry
+import dev.willram.ramcore.commands.CommandArgument
+import dev.willram.ramcore.commands.CommandContext
+import dev.willram.ramcore.commands.CommandModule
+import dev.willram.ramcore.commands.CommandSpec
+import dev.willram.ramcore.commands.RamCommands
+import dev.willram.ramcore.commands.ResolvedCommandArgument
 import dev.willram.ramcore.event.Events
 import dev.willram.ramcore.event.functional.merged.MergedSubscriptionBuilder
 import dev.willram.ramcore.event.functional.single.SingleSubscriptionBuilder
 import dev.willram.ramcore.metadata.MetadataKey
 import dev.willram.ramcore.metadata.MetadataMap
 import dev.willram.ramcore.scheduler.TaskContext
+import io.papermc.paper.command.brigadier.Commands
+import io.papermc.paper.command.brigadier.argument.resolvers.ArgumentResolver
 import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.World
@@ -21,7 +25,6 @@ import org.bukkit.block.BlockState
 import org.bukkit.entity.Entity
 import org.bukkit.event.Event
 import org.bukkit.event.EventPriority
-import java.util.Optional
 
 inline fun <reified T : Any> ramTypeToken(): TypeToken<T> = object : TypeToken<T>() {}
 
@@ -41,25 +44,58 @@ operator fun <T : Any> MetadataMap.set(key: MetadataKey<T>, value: T) {
     put(key, value)
 }
 
-inline fun <reified T : Any> Argument.parse(): Optional<T> = parse(ramTypeToken<T>())
+fun command(label: String, configure: CommandSpec.() -> Unit): CommandSpec =
+    RamCommands.command(label).apply(configure)
 
-inline fun <reified T : Any> Argument.parseOrNull(): T? {
-    val parsed = parse<T>()
-    return if (parsed.isPresent) parsed.get() else null
+fun commandModule(vararg specs: CommandSpec): CommandModule =
+    RamCommands.module(*specs)
+
+fun Commands.register(vararg specs: CommandSpec): Set<String> =
+    RamCommands.register(this, *specs)
+
+fun Commands.register(vararg modules: CommandModule): Set<String> =
+    RamCommands.register(this, *modules)
+
+fun CommandSpec.literal(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec {
+    literal(name).configure()
+    return this
 }
 
-@Throws(CommandInterruptException::class)
-inline fun <reified T : Any> Argument.parseOrFail(): T = parseOrFail(ramTypeToken<T>())
-
-inline fun <reified T : Any> ArgumentParserRegistry.find(): Optional<ArgumentParser<T>> = find(ramTypeToken<T>())
-
-inline fun <reified T : Any> ArgumentParserRegistry.findAll(): Collection<ArgumentParser<T>> = findAll(ramTypeToken<T>())
-
-inline fun <reified T : Any> ArgumentParserRegistry.register(noinline parser: (String) -> T?) {
-    register(ramTypeToken<T>(), ArgumentParser.of { input -> Optional.ofNullable(parser(input)) })
+fun <T : Any> CommandSpec.argument(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec {
+    argument(argument).configure()
+    return this
 }
 
-fun <T : Any> Optional<T>.orNull(): T? = if (isPresent) get() else null
+fun <T : Any, R : ArgumentResolver<T>> CommandSpec.argument(
+    argument: ResolvedCommandArgument<T, R>,
+    configure: CommandSpec.Node.() -> Unit
+): CommandSpec {
+    argument(argument).configure()
+    return this
+}
+
+fun CommandSpec.Node.literal(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
+    literal(name).configure()
+    return this
+}
+
+fun <T : Any> CommandSpec.Node.argument(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
+    argument(argument).configure()
+    return this
+}
+
+fun <T : Any, R : ArgumentResolver<T>> CommandSpec.Node.argument(
+    argument: ResolvedCommandArgument<T, R>,
+    configure: CommandSpec.Node.() -> Unit
+): CommandSpec.Node {
+    argument(argument).configure()
+    return this
+}
+
+operator fun <T : Any> CommandContext.get(argument: CommandArgument<T>): T = this.get(argument)
+
+fun <T : Any, R : ArgumentResolver<T>> CommandContext.resolve(argument: ResolvedCommandArgument<T, R>): T =
+    this.resolve(argument)
 
 fun Entity.taskContext(): TaskContext = TaskContext.of(this)
 

@@ -25,7 +25,7 @@
 
 package dev.willram.ramcore.random;
 
-import javax.annotation.Nonnegative;
+import org.jetbrains.annotations.Range;
 
 /**
  * Represents an object which has a weight
@@ -43,7 +43,7 @@ public interface Weighted {
      *
      * @return The weight
      */
-    @Nonnegative
+    @Range(from = 0, to = Long.MAX_VALUE)
     double getWeight();
 
 }
