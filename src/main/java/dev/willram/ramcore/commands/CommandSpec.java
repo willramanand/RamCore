@@ -7,6 +7,9 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import dev.willram.ramcore.cooldown.Cooldown;
+import dev.willram.ramcore.permission.PermissionNode;
+import dev.willram.ramcore.permission.PermissionRequirement;
 import dev.willram.ramcore.scheduler.Schedulers;
 import dev.willram.ramcore.utils.LoaderUtils;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -71,6 +74,18 @@ public final class CommandSpec {
     @NotNull
     public CommandSpec permission(@NotNull String permission) {
         this.root.permission(permission);
+        return this;
+    }
+
+    @NotNull
+    public CommandSpec permission(@NotNull PermissionNode permission) {
+        this.root.permission(permission);
+        return this;
+    }
+
+    @NotNull
+    public CommandSpec permissions(@NotNull PermissionRequirement requirement) {
+        this.root.permissions(requirement);
         return this;
     }
 
@@ -262,6 +277,7 @@ public final class CommandSpec {
         private final List<Node> children = new ArrayList<>();
         private final List<ArgumentBuilder<CommandSourceStack, ?>> brigadierChildren = new ArrayList<>();
         private final List<String> examples = new ArrayList<>();
+        private final List<CommandCooldown> cooldowns = new ArrayList<>();
         private String description = "";
         private boolean executable;
         private boolean childrenAttached;
@@ -348,6 +364,18 @@ public final class CommandSpec {
         }
 
         @NotNull
+        public Node permission(@NotNull PermissionNode permission) {
+            Objects.requireNonNull(permission, "permission");
+            return requires(source -> source.getSender().hasPermission(permission.value()));
+        }
+
+        @NotNull
+        public Node permissions(@NotNull PermissionRequirement requirement) {
+            Objects.requireNonNull(requirement, "requirement");
+            return requires(requirement.asCommandRequirement());
+        }
+
+        @NotNull
         public Node playerOnly() {
             return requires(source -> source.getSender() instanceof Player);
         }
@@ -398,6 +426,18 @@ public final class CommandSpec {
         }
 
         @NotNull
+        public Node cooldown(@NotNull Cooldown cooldown) {
+            return cooldown(CommandCooldown.perSender(cooldown));
+        }
+
+        @NotNull
+        public Node cooldown(@NotNull CommandCooldown cooldown) {
+            ensureMutable();
+            this.cooldowns.add(Objects.requireNonNull(cooldown, "cooldown"));
+            return this;
+        }
+
+        @NotNull
         public Node executes(@NotNull CommandExecutor executor) {
             ensureMutable();
             Objects.requireNonNull(executor, "executor");
@@ -423,7 +463,14 @@ public final class CommandSpec {
             this.executable = true;
             this.builder.executes(context -> {
                 CommandContext commandContext = new CommandContext(context);
-                Schedulers.async().execute(() -> execute(commandContext, executor));
+                try {
+                    runGuards(commandContext);
+                } catch (CommandInterruptException e) {
+                    e.getAction().accept(commandContext.sender());
+                    return 0;
+                }
+
+                Schedulers.async().execute(() -> executeWithoutGuards(commandContext, executor));
                 return Command.SINGLE_SUCCESS;
             });
             return this;
@@ -477,7 +524,22 @@ public final class CommandSpec {
             return List.copyOf(this.examples);
         }
 
-        private static int execute(CommandContext commandContext, CommandExecutor executor) {
+        private int execute(CommandContext commandContext, CommandExecutor executor) {
+            try {
+                runGuards(commandContext);
+                executor.execute(commandContext);
+                return Command.SINGLE_SUCCESS;
+            } catch (CommandInterruptException e) {
+                e.getAction().accept(commandContext.sender());
+                return 0;
+            } catch (Throwable t) {
+                LoaderUtils.getPlugin().getLogger().log(Level.SEVERE, "Unhandled exception while executing command", t);
+                commandContext.msg("<red>An error occurred while processing this command.");
+                return 0;
+            }
+        }
+
+        private static int executeWithoutGuards(CommandContext commandContext, CommandExecutor executor) {
             try {
                 executor.execute(commandContext);
                 return Command.SINGLE_SUCCESS;
@@ -488,6 +550,12 @@ public final class CommandSpec {
                 LoaderUtils.getPlugin().getLogger().log(Level.SEVERE, "Unhandled exception while executing command", t);
                 commandContext.msg("<red>An error occurred while processing this command.");
                 return 0;
+            }
+        }
+
+        private void runGuards(CommandContext commandContext) throws CommandInterruptException {
+            for (CommandCooldown cooldown : this.cooldowns) {
+                cooldown.check(commandContext);
             }
         }
 

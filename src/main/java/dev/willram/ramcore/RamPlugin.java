@@ -3,7 +3,8 @@ package dev.willram.ramcore;
 import dev.willram.ramcore.scheduler.RamExecutors;
 import dev.willram.ramcore.scheduler.Schedulers;
 import dev.willram.ramcore.scheduler.TaskContext;
-import dev.willram.ramcore.terminable.TerminableConsumer;
+import dev.willram.ramcore.service.ServiceContext;
+import dev.willram.ramcore.service.ServiceRegistry;
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import dev.willram.ramcore.terminable.module.TerminableModule;
 import dev.willram.ramcore.time.Time;
@@ -20,11 +21,12 @@ import org.jetbrains.annotations.NotNull;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("UnstableApiUsage")
-public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer {
+public abstract class RamPlugin extends JavaPlugin implements ServiceContext {
 
 
     // the backing terminable registry
     private CompositeTerminable terminableRegistry;
+    private ServiceRegistry serviceRegistry;
 
     public abstract void enable();
     public abstract void disable();
@@ -44,6 +46,7 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
             this.registerCommands(commands);
         });
 
+        this.serviceRegistry.enableAll();
         this.enable();
 
         startTime = Time.nowMillis() - startTime;
@@ -57,6 +60,7 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
 
 
         this.disable();
+        this.serviceRegistry.close();
 
         // terminate the registry
         this.terminableRegistry.closeAndReportException();
@@ -70,7 +74,9 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
     @Override
     public void onLoad() {
         this.terminableRegistry = CompositeTerminable.create();
+        this.serviceRegistry = ServiceRegistry.create(this);
         this.load();
+        this.serviceRegistry.loadAll();
     }
 
     public void log(String message) {
@@ -92,6 +98,12 @@ public abstract class RamPlugin extends JavaPlugin implements TerminableConsumer
     @Override
     public <T extends TerminableModule> T bindModule(@NotNull T module) {
         return this.terminableRegistry.bindModule(module);
+    }
+
+    @NotNull
+    @Override
+    public ServiceRegistry services() {
+        return this.serviceRegistry;
     }
 
     public abstract void registerCommands(@NotNull Commands commands);

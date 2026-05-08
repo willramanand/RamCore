@@ -93,6 +93,42 @@ public final class Schedulers {
     }
 
     /**
+     * Returns the global scheduler.
+     *
+     * @return a global scheduler
+     */
+    public static Scheduler forGlobal() {
+        return sync();
+    }
+
+    /**
+     * Returns the async scheduler.
+     *
+     * @return an async scheduler
+     */
+    public static Scheduler forAsync() {
+        return async();
+    }
+
+    /**
+     * Returns a scheduler for the given execution anchor.
+     *
+     * @param context the scheduling anchor
+     * @return a matching scheduler
+     */
+    @NotNull
+    public static Scheduler forContext(@NotNull TaskContext context) {
+        Objects.requireNonNull(context, "context");
+        return switch (context.type()) {
+            case GLOBAL -> sync();
+            case ASYNC -> async();
+            case ENTITY -> forEntity(context.entity());
+            case REGION -> forRegion(context.location());
+            case CHUNK -> forChunk(context.world(), context.chunkX(), context.chunkZ());
+        };
+    }
+
+    /**
      * Returns a scheduler for work that must run on the region owning an entity.
      *
      * <p>On Folia this uses the entity scheduler, so the task follows the entity if it
@@ -712,14 +748,7 @@ public final class Schedulers {
 
     @NotNull
     private static Scheduler scheduler(@NotNull TaskContext context) {
-        Objects.requireNonNull(context, "context");
-        return switch (context.type()) {
-            case GLOBAL -> sync();
-            case ASYNC -> async();
-            case ENTITY -> forEntity(context.entity());
-            case REGION -> forRegion(context.location());
-            case CHUNK -> forChunk(context.world(), context.chunkX(), context.chunkZ());
-        };
+        return forContext(context);
     }
 
     @NotNull

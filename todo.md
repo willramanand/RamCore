@@ -2,99 +2,99 @@
 
 ## High-Value Improvements
 
-- [ ] Add a service registry and module lifecycle system.
+- [x] Add a service registry and module lifecycle system.
   - Register services, dependencies, startup order, and shutdown behavior.
   - Make plugin composition cleaner than manual wiring in `onEnable`.
 
-- [ ] Build a typed configuration API.
+- [x] Build a typed configuration API.
   - Support defaults, reloads, validation, and clear startup errors.
   - Start with Bukkit YAML, with room for JSON or TOML later.
 
-- [ ] Add a centralized message and translation system.
+- [x] Add a centralized message and translation system.
   - Use Adventure `Component` output consistently.
   - Support prefixes, colors, placeholders, MiniMessage, reusable message keys, and eventual locale support.
 
-- [ ] Improve permission helpers.
+- [x] Improve permission helpers.
   - Add utilities for permission checks, fallback messages, grouped permissions, and command visibility.
   - Integrate with the command API where appropriate.
 
-- [ ] Polish the scheduler facade.
+- [x] Polish the scheduler facade.
   - Provide a high-level Folia-aware API for global, async, region, entity, and player scheduling.
   - Make common scheduling paths consistent and hard to misuse.
 
 ## Command And Developer Experience
 
-- [ ] Continue improving the command API.
+- [x] Continue improving the command API.
   - Review additional Brigadier interop use cases.
   - Add more examples for command modules, suggestions, requirements, and async execution.
   - Consider command cooldowns and permission-aware generated help extensions.
 
-- [ ] Expand the Kotlin DSL.
+- [x] Expand the Kotlin DSL.
   - Cover config, scheduling, events, messages, menus, and persistent data helpers.
   - Keep Java APIs as the primary public contract and Kotlin as ergonomic sugar.
 
-- [ ] Add stronger developer-facing error handling.
+- [x] Add stronger developer-facing error handling.
   - Fail fast when APIs are misused.
   - Prefer actionable exceptions that explain what the plugin developer should change.
 
 ## RamCore 2.0 Platform Features
 
-- [ ] Add a content registry system.
+- [x] Add a content registry system.
   - Provide central registries for custom items, mobs, bosses, loot tables, menus, effects, regions, quests, commands, rewards, and templates.
   - Support namespaced keys, plugin ownership, lifecycle binding, validation, conflict detection, reload behavior, and lookup by id.
   - Allow consuming plugins to register content in code first, then later support config-backed content definitions.
 
-- [ ] Add a template system.
+- [x] Add a template system.
   - Support reusable templates for items, mobs, bosses, loot tables, GUIs, NPCs, holograms, display entities, regions, rewards, and effects.
   - Include inheritance or composition so common settings can be shared across related templates.
   - Add validation and clear diagnostics for missing references, invalid materials/entities, broken loot entries, and unsupported version-specific fields.
 
-- [ ] Add a region and rule engine.
+- [x] Add a region and rule engine.
   - Provide lightweight regions independent of WorldGuard, with optional WorldGuard integration later.
   - Support cuboid, polygon, sphere/cylinder, chunk, world, and composite regions.
   - Add enter, exit, stay, tick, block, entity, combat, command, loot, and interaction rules.
   - Support priorities, inheritance, deny/allow/pass results, temporary regions, arena boundaries, dungeon rooms, and region-scoped metadata.
 
-- [ ] Add a generic reward engine.
+- [x] Add a generic reward engine.
   - Support items, money, XP, commands, permissions, cooldown resets, loot rolls, messages, titles, sounds, particles, boss-bar updates, and custom callbacks.
   - Add reward contexts for player, party, region, mob, command, quest, boss, dungeon, and event rewards.
   - Support conditional rewards, weighted rewards, guaranteed rewards, preview mode, dry-run validation, and audit logging.
   - Keep this separate from instanced loot so quests, crates, bosses, dungeons, events, and commands can reuse the same reward pipeline.
 
-- [ ] Add an effect and presentation API.
+- [x] Add an effect and presentation API.
   - Unify titles, subtitles, action bars, boss bars, chat messages, sounds, particles, glowing, fake equipment, entity animations, and timed sequences.
   - Support per-player and grouped presentation contexts.
   - Add reusable scripted sequences for polished gameplay feedback.
   - Make all timed effects terminable and scheduler-aware.
 
-- [ ] Add a display entity and hologram toolkit.
+- [x] Add a display entity and hologram toolkit.
   - Support text displays, item displays, block displays, hologram stacks, transforms, interpolation, billboarding, brightness, shadows, and background styling.
   - Add per-player visibility, lifecycle cleanup, Folia-safe updates, and template-backed displays.
   - Provide simple APIs for common labels, floating damage numbers, objective markers, NPC nameplates, region labels, and loot previews.
 
-- [ ] Add an NPC toolkit.
+- [x] Add an NPC toolkit.
   - Support static NPCs, click handlers, nameplates, look-at-player behavior, dialogue triggers, per-player visibility, and lifecycle cleanup.
   - Explore skin support where practical.
   - Provide packet-backed fake NPCs as an advanced mode while keeping server-backed entities as the simpler default.
   - Integrate NPCs with commands, regions, quests/objectives, rewards, and dialogue systems.
 
-- [ ] Add a party and group API.
+- [x] Add a party and group API.
   - Support parties, temporary groups, leaders, invites, membership rules, group chat hooks, shared loot scope, shared objectives, and group teleport.
   - Add damage contribution tracking for bosses and events.
   - Add eligibility checks for loot, quests, arenas, dungeons, and rewards.
   - Keep storage optional so simple plugins can use in-memory groups and larger plugins can persist them.
 
-- [ ] Add an objective and quest progress API.
+- [x] Add an objective and quest progress API.
   - Provide reusable progress trackers for killing mobs, collecting items, entering regions, interacting with blocks/entities, running commands/actions, timers, and chained objectives.
   - Support player and party progress, objective reset, partial completion, hidden objectives, and progress events.
   - Keep the core generic enough for achievements, tutorials, battle passes, daily tasks, dungeons, and quests.
 
-- [ ] Add a boss and encounter framework.
+- [x] Add a boss and encounter framework.
   - Support boss phases, ability timers, target rules, damage contribution, arena boundaries, enrage timers, boss bars, wipe detection, reset conditions, and reward distribution.
   - Integrate with mob AI templates, NMS entity control, regions, parties, instanced loot, rewards, and presentation effects.
   - Provide reusable ability primitives such as targeted attack, area attack, summon adds, teleport, shield, heal, phase transition, and scripted sequence.
 
-- [ ] Add an optional integration layer.
+- [x] Add an optional integration layer.
   - Provide capability-checked adapters for LuckPerms, Vault, PlaceholderAPI, MiniPlaceholders, WorldGuard, ProtocolLib, Citizens, ItemsAdder, and Oraxen.
   - Keep integrations optional and isolated from core modules.
   - Expose a consistent capability API so consuming plugins can check whether an integration is available and what it supports.

@@ -1,6 +1,9 @@
 package dev.willram.ramcore.commands;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import dev.willram.ramcore.permission.PermissionNode;
+import dev.willram.ramcore.permission.PermissionRequirement;
+import dev.willram.ramcore.permission.Permissions;
 import io.papermc.paper.command.brigadier.argument.resolvers.ArgumentResolver;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
@@ -117,9 +120,29 @@ public class CommandContext {
         return this.sender.hasPermission(Objects.requireNonNull(permission, "permission"));
     }
 
+    public boolean hasPermission(@NotNull PermissionNode permission) {
+        return Permissions.has(this.sender, permission);
+    }
+
+    public boolean hasPermissions(@NotNull PermissionRequirement requirement) {
+        return Permissions.has(this.sender, requirement);
+    }
+
     public void requirePermission(@NotNull String permission) throws CommandInterruptException {
         if (!hasPermission(permission)) {
             throw noPermission();
+        }
+    }
+
+    public void requirePermission(@NotNull PermissionNode permission) throws CommandInterruptException {
+        if (!hasPermission(permission)) {
+            throw fail(permission.denialMessage());
+        }
+    }
+
+    public void requirePermissions(@NotNull PermissionRequirement requirement) throws CommandInterruptException {
+        if (!hasPermissions(requirement)) {
+            throw fail(requirement.denialMessage());
         }
     }
 

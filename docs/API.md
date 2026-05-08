@@ -7,7 +7,21 @@ Unless stated otherwise, examples assume:
 ```java
 import dev.willram.ramcore.*;
 import dev.willram.ramcore.commands.*;
+import dev.willram.ramcore.content.*;
+import dev.willram.ramcore.display.*;
+import dev.willram.ramcore.encounter.*;
+import dev.willram.ramcore.integration.*;
+import dev.willram.ramcore.message.*;
+import dev.willram.ramcore.npc.*;
+import dev.willram.ramcore.objective.*;
+import dev.willram.ramcore.party.*;
+import dev.willram.ramcore.permission.*;
+import dev.willram.ramcore.presentation.*;
+import dev.willram.ramcore.region.*;
+import dev.willram.ramcore.reward.*;
 import dev.willram.ramcore.scheduler.*;
+import dev.willram.ramcore.service.*;
+import dev.willram.ramcore.template.*;
 import dev.willram.ramcore.terminable.*;
 ```
 
@@ -28,6 +42,7 @@ Useful methods:
 
 - `log(String message)` sends a MiniMessage-formatted console line with the plugin name prefix.
 - `registerListener(Listener listener)` registers a Bukkit listener against this plugin.
+- `services()` exposes the plugin service registry.
 - `bind(AutoCloseable terminable)` registers resources to be closed automatically on disable.
 - `bindModule(TerminableModule module)` sets up a reusable module and binds its resources.
 
@@ -57,6 +72,484 @@ public final class ExamplePlugin extends RamPlugin {
 
 `RamPlugin` owns a `CompositeTerminable`. Bound listeners, tasks, subscriptions, and other closeables are closed in LIFO order during disable.
 
+## Services
+
+Package: `dev.willram.ramcore.service`
+
+RamCore services are typed, dependency-aware lifecycle units. Register services during `RamPlugin#load()`. RamCore loads registered services after `load()`, enables them before `enable()`, and disables them after plugin-specific `disable()` in reverse dependency order.
+
+Primary types:
+
+- `ServiceRegistry` registers services, resolves dependencies, and runs lifecycle phases.
+- `ServiceKey<T>` is a typed service id.
+- `ServiceRegistration<T>` configures dependencies.
+- `Service` exposes optional `load`, `enable`, and `disable` callbacks.
+- `ServiceContext` provides service lookup and `TerminableConsumer` binding during callbacks.
+
+Example:
+
+```java
+public final class ExamplePlugin extends RamPlugin {
+    private static final ServiceKey<ConfigService> CONFIG =
+            ServiceKey.of("config", ConfigService.class);
+    private static final ServiceKey<MessageService> MESSAGES =
+            ServiceKey.of("messages", MessageService.class);
+
+    @Override
+    public void load() {
+        services().register(CONFIG, new ConfigService(this));
+        services().register(MESSAGES, new MessageService()).dependsOn(CONFIG);
+    }
+
+    @Override
+    public void enable() {
+        services().require(MESSAGES).announceStartup();
+    }
+
+    @Override
+    public void disable() {
+    }
+
+    @Override
+    public void registerCommands(Commands commands) {
+    }
+}
+```
+
+Dependency order:
+
+```java
+services().register(MESSAGES, new MessageService()).dependsOn(CONFIG);
+```
+
+`CONFIG` loads and enables before `MESSAGES`. `MESSAGES` disables before `CONFIG`. Missing or cyclic dependencies fail during service load.
+
+## Messages
+
+Package: `dev.willram.ramcore.message`
+
+RamCore messages use Adventure `Component` output and MiniMessage templates. Use `MessageKey` constants for reusable message ids, then render them through a `MessageCatalog`.
+
+Primary types:
+
+- `MessageKey` declares a reusable id and fallback template.
+- `MessageCatalog` renders templates with optional prefix and sends to Adventure audiences.
+- `MessagePlaceholders` creates parsed, unparsed, component, and map-backed MiniMessage placeholders.
+
+Example:
+
+```java
+private static final MessageKey WELCOME =
+        MessageKey.of("welcome", "<green>Welcome, <player>!");
+
+private final MessageCatalog messages = MessageCatalog.builder()
+        .prefix("<gold>[Example]</gold> ")
+        .message(WELCOME, "<green>Hello, <player>.")
+        .build();
+
+public void greet(Player player) {
+    messages.send(player, WELCOME, MessagePlaceholders.parsed("player", player.getName()));
+}
+```
+
+Use `renderRaw(...)` when no prefix should be applied, such as inventory titles or scoreboard lines.
+
+## Content Registries
+
+Package: `dev.willram.ramcore.content`
+
+RamCore content registries provide typed, namespaced, owner-tracked lookup for code-defined content. Config-backed content can build on this later.
+
+Primary types:
+
+- `ContentId` is a `namespace:value` identifier.
+- `ContentKey<T>` combines id and value type.
+- `ContentEntry<T>` stores key, owner, and value.
+- `ContentRegistry<T>` registers values, detects conflicts, tracks owners, and supports cleanup by owner.
+
+Example:
+
+```java
+ContentRegistry<ItemTemplate> items = ContentRegistry.create(ItemTemplate.class);
+ContentKey<ItemTemplate> fireSword =
+        ContentKey.of("example", "fire_sword", ItemTemplate.class);
+
+items.register(getName(), fireSword, template);
+
+ItemTemplate template = items.require(ContentId.parse("example:fire_sword"));
+```
+
+Duplicate ids fail fast. Use `unregisterOwner(owner)` during reloads or module shutdown.
+
+## Templates
+
+Package: `dev.willram.ramcore.template`
+
+RamCore templates provide typed reusable definitions with optional parent inheritance. Each content type supplies its own merge logic through `TemplateComposer<T>`.
+
+Primary types:
+
+- `Template<T>` stores key, optional parent id, and value.
+- `TemplateComposer<T>` merges parent values with child overrides.
+- `TemplateRegistry<T>` registers, validates, resolves, and owner-cleans templates.
+- `TemplateValidationException` reports missing parents and inheritance cycles.
+
+Example:
+
+```java
+TemplateRegistry<ItemTemplate> templates =
+        TemplateRegistry.create(ItemTemplate.class, ItemTemplate::merge);
+
+ContentKey<ItemTemplate> base = ContentKey.of("example", "base_sword", ItemTemplate.class);
+ContentKey<ItemTemplate> fire = ContentKey.of("example", "fire_sword", ItemTemplate.class);
+
+templates.register(getName(), Template.of(base, baseTemplate));
+templates.register(getName(), Template.extending(fire, base.id(), fireOverrides));
+
+ItemTemplate resolved = templates.resolve(fire.id());
+```
+
+Call `validate()` during reload/startup to fail fast before gameplay code resolves templates.
+
+## Regions And Rules
+
+Package: `dev.willram.ramcore.region`
+
+RamCore regions provide lightweight shape containment and priority-based rule evaluation independent of WorldGuard.
+
+Primary types:
+
+- `RegionShape` tests whether a `Position` is inside a region.
+- `RegionShapes` creates cuboid, sphere, any, and all shapes.
+- `RuleRegion` combines a shape, region priority, and rules.
+- `RegionRule` evaluates one action category and returns `ALLOW`, `DENY`, or `PASS`.
+- `RegionRuleEngine` registers regions and evaluates highest-priority matching rules.
+
+Example:
+
+```java
+RegionRuleEngine engine = new RegionRuleEngine();
+RuleRegion spawn = RuleRegion.builder(ContentId.parse("example:spawn"), RegionShapes.cuboid(region))
+        .priority(10)
+        .rule(RegionRule.of("deny-block", RegionAction.BLOCK, 0, RegionRuleResult.DENY))
+        .build();
+
+engine.register(getName(), spawn);
+
+RegionDecision decision = engine.evaluate(RegionQuery.of(position, RegionAction.BLOCK));
+if (decision.denied()) {
+    // cancel block action
+}
+```
+
+Rules can be conditional with `rule.when(query -> ...)`. Region priority is applied before rule priority when regions overlap.
+
+## Rewards
+
+Package: `dev.willram.ramcore.reward`
+
+RamCore rewards provide a generic validation, preview, and execution pipeline separate from loot generation.
+
+Primary types:
+
+- `RewardContext` carries scope, subject, and metadata.
+- `RewardAction` executes one reward and can validate prerequisites.
+- `RewardEntry` defines guaranteed or weighted reward entries with optional conditions.
+- `RewardPlan` groups guaranteed rewards and weighted rolls.
+- `RewardEngine` validates, previews, and executes plans.
+- `RewardReport` returns outcomes and validation errors.
+
+Example:
+
+```java
+RewardPlan plan = RewardPlan.builder()
+        .guaranteed(RewardEntry.guaranteed("message", ctx -> {
+            player.sendRichMessage("<green>Quest complete.");
+            return RewardOutcome.success("message");
+        }))
+        .weighted(RewardEntry.weighted("bonus_item", giveBonusItem, 1))
+        .rolls(1)
+        .build();
+
+RewardReport preview = engine.preview(plan, RewardContext.of("quest"), random);
+RewardReport result = engine.execute(plan, RewardContext.of("quest"), random);
+```
+
+Preview selects rewards without applying actions. Execution stops before side effects if validation returns errors.
+
+## Presentation
+
+Package: `dev.willram.ramcore.presentation`
+
+RamCore presentation effects wrap Adventure output behind reusable, terminable effects.
+
+Primary types:
+
+- `PresentationContext` targets one or more audiences and carries scheduler anchor.
+- `PresentationEffect` plays an effect and returns a `Terminable` for cleanup.
+- `PresentationEffects` provides message, action bar, title, sound, boss bar, custom, and sequence effects.
+
+Example:
+
+```java
+PresentationContext context = PresentationContext.of(player);
+
+PresentationEffects.sequence()
+        .then(PresentationEffects.message(Component.text("Wave started.")))
+        .then(PresentationEffects.actionBar(Component.text("Defend the gate.")), 20L)
+        .play(context)
+        .bindWith(this);
+```
+
+Boss-bar effects hide the bar when their returned `Terminable` closes. Delayed sequence steps run through `Schedulers` using the context `TaskContext`.
+
+## Displays And Holograms
+
+Package: `dev.willram.ramcore.display`
+
+RamCore display helpers configure Bukkit display entities and spawn them through region-aware scheduler calls.
+
+Primary types:
+
+- `TextDisplaySpec`, `ItemDisplaySpec`, and `BlockDisplaySpec` configure display entities.
+- `DisplayOptions` applies shared settings such as billboard, brightness, view range, shadows, size, and interpolation.
+- `DisplaySpawner` spawns one configured display and returns a `DisplayHandle`.
+- `HologramSpec` defines stacked text display lines.
+- `Holograms` spawns hologram stacks and returns a terminable `Hologram`.
+
+Example:
+
+```java
+TextDisplaySpec label = TextDisplaySpec.text(Component.text("Objective"))
+        .shadowed(true)
+        .alignment(TextDisplay.TextAlignment.CENTER);
+label.options().billboard(Display.Billboard.CENTER).viewRange(32f);
+
+DisplaySpawner.spawn(location, label)
+        .thenAcceptSync(handle -> bind(handle));
+
+HologramSpec hologram = HologramSpec.create()
+        .text(Component.text("Boss"))
+        .text(Component.text("Phase 2"));
+
+Holograms.spawn(location, hologram)
+        .thenAcceptSync(instance -> bind(instance));
+```
+
+`DisplayHandle#close()` and `Hologram#close()` remove spawned display entities through their entity schedulers.
+
+## NPCs
+
+Package: `dev.willram.ramcore.npc`
+
+RamCore NPC helpers manage server-backed Bukkit entities first. Packet-only fake NPCs can build on this later without making simple static NPCs depend on ProtocolLib or NMS.
+
+Primary types:
+
+- `NpcSpec` configures a spawned entity with nameplate, visibility, invulnerability, gravity, AI, persistence, and click behavior.
+- `NpcSpawner` spawns one configured NPC through a region-aware scheduler call and returns an `NpcHandle`.
+- `NpcHandle` owns the entity, supports teleport, look-at, per-player show/hide, click dispatch, and cleanup.
+- `NpcRegistry` tracks owned handles and can register Bukkit interact/attack listeners through `NpcRegistry.create(plugin)`.
+- `Npcs` is the small facade for specs, spawning, and registries.
+
+Example:
+
+```java
+NpcRegistry npcs = Npcs.registry(this);
+bind(npcs);
+
+NpcSpec<Villager> guide = Npcs.spec(Villager.class)
+        .name(Component.text("Guide"))
+        .nameVisible(true)
+        .ai(false)
+        .invulnerable(true)
+        .onClick(ctx -> messages.send(ctx.player(), GUIDE_GREETING));
+
+Npcs.spawn(location, guide).thenAcceptSync(handle -> {
+    npcs.register(getName(), handle);
+    bind(handle);
+});
+```
+
+Use `handle.hideFrom(plugin, player)`, `handle.showTo(plugin, player)`, and `handle.visibleTo(player)` for per-player visibility. `handle.lookAt(player)` rotates the NPC toward a player's eye location through the entity scheduler.
+
+## Parties And Groups
+
+Package: `dev.willram.ramcore.party`
+
+RamCore parties are in-memory, UUID-based groups. Persistence, commands, chat formatting, and UI are intentionally left to consuming plugins.
+
+Primary types:
+
+- `PartyManager` creates parties, tracks one-party-per-player membership, manages invites, leave/kick/promote/disband actions, and applies membership rules.
+- `PartyGroup` exposes leader, members, roles, pending invites, shared metadata, contribution tracking, and reward context.
+- `PartyOptions` configures max size, invite TTL, and leader-leave behavior.
+- `PartyMembershipRule` allows plugin-defined join eligibility.
+- `PartyContributionTracker` records boss/event damage or other shared eligibility scores.
+- `PartyTeleport` schedules member teleports through player schedulers.
+- `PartyChatHandler` and `PartyChatContext` are small hooks for plugin-defined group chat.
+
+Example:
+
+```java
+PartyManager parties = Parties.manager(
+        Parties.options().maxMembers(4).disbandWhenLeaderLeaves(false)
+);
+
+PartyGroup party = parties.createParty(leaderId).value();
+parties.invite(leaderId, friendId);
+parties.accept(party.id(), friendId);
+
+party.contributions().add(friendId, 42.0d);
+Set<UUID> eligible = party.contributions().eligible(10.0d);
+
+RewardContext context = party.rewardContext("dungeon_reward");
+```
+
+Custom join rule:
+
+```java
+parties.rule((party, playerId) -> bannedFromDungeon(playerId)
+        ? PartyResult.failure("player is not eligible")
+        : PartyResult.ok());
+```
+
+Teleport online members:
+
+```java
+PartyTeleport.teleport(party, Bukkit::getPlayer, destination);
+```
+
+## Objectives And Quest Progress
+
+Package: `dev.willram.ramcore.objective`
+
+RamCore objectives provide storage-neutral progress tracking for achievements, tutorials, quests, daily tasks, battle passes, dungeons, and party goals. Bukkit listeners, commands, regions, NPCs, and other systems feed generic `ObjectiveEvent` values into an `ObjectiveTracker`.
+
+Primary types:
+
+- `ObjectiveDefinition` describes one objective by `ContentId`, tasks, hidden state, and whether tasks must progress in order.
+- `ObjectiveTask` defines one measurable step: action, target id, required amount, and hidden state.
+- `ObjectiveSubject` scopes progress to a player, party, global id, or custom subject.
+- `ObjectiveEvent` is the generic input used to advance progress.
+- `ObjectiveProgress` exposes current per-task values and completion state.
+- `ObjectiveUpdate` describes one task advancement and is emitted to `ObjectiveProgressListener` hooks.
+- `Objectives` is the facade for trackers, definitions, and tasks.
+
+Example:
+
+```java
+ObjectiveDefinition quest = Objectives.objective(ContentId.parse("quest:first_steps"))
+        .chained(true)
+        .task(Objectives.task("enter_spawn", ObjectiveAction.ENTER_REGION, "example:spawn", 1))
+        .task(Objectives.task("talk_guide", ObjectiveAction.INTERACT_ENTITY, "example:guide", 1))
+        .build();
+
+ObjectiveTracker tracker = Objectives.tracker()
+        .register(quest)
+        .listener(update -> {
+            if (update.objectiveCompleted()) {
+                // reward or announce completion
+            }
+        });
+
+ObjectiveSubject subject = ObjectiveSubject.player(player.getUniqueId());
+tracker.apply(ObjectiveEvent.of(subject, ObjectiveAction.ENTER_REGION, "example:spawn"));
+tracker.apply(ObjectiveEvent.of(subject, ObjectiveAction.INTERACT_ENTITY, "example:guide"));
+```
+
+Use `ObjectiveSubject.party(party.id())` for shared party progress. Use target `*` on a task to match any target for that action, such as "kill any mob". `tracker.reset(subject, objectiveId)` clears one objective, and `tracker.resetSubject(subject)` clears all progress for that subject.
+
+## Bosses And Encounters
+
+Package: `dev.willram.ramcore.encounter`
+
+RamCore encounters are engine-level boss runs. They do not spawn mobs directly; plugin code wires Bukkit/NMS entities, regions, boss bars, rewards, and presentation effects to the encounter instance.
+
+Primary types:
+
+- `EncounterDefinition` describes a boss encounter, max health, phases, enrage timer, optional arena, and optional reward plan.
+- `EncounterPhase` selects behavior by remaining health percentage and owns timed abilities.
+- `EncounterAbility` schedules repeated ability callbacks by tick interval and initial delay.
+- `EncounterInstance` tracks runtime state, health, current phase, elapsed ticks, contributors, wipe/reset/complete state, arena checks, and reward context.
+- `EncounterRegistry` stores definitions and creates configured instances.
+- `EncounterUpdate` and `EncounterListener` provide lifecycle hooks for boss bars, announcements, rewards, and diagnostics.
+- `Encounters` is the facade for registries, definitions, phases, and abilities.
+
+Example:
+
+```java
+EncounterDefinition boss = Encounters.encounter(ContentId.parse("dungeon:warden"), 500.0d)
+        .enrageAfterTicks(20L * 60L * 5L)
+        .arena(RegionShapes.cuboid(arenaRegion))
+        .phase(Encounters.phase("main", 1.0d)
+                .ability(Encounters.ability("slam", 100L).action((encounter, ability) -> castSlam())))
+        .phase(Encounters.phase("burn", 0.35d)
+                .ability(Encounters.ability("meteor", 60L).initialDelay(20L).action((encounter, ability) -> castMeteor())))
+        .build();
+
+EncounterInstance run = Encounters.registry(update -> {
+            if (update.signal() == EncounterSignal.COMPLETE) {
+                rewards.execute(rewardPlan, update.encounter().rewardContext("boss"), random);
+            }
+        })
+        .register(boss)
+        .create(boss.id());
+
+run.start();
+run.tick();
+run.damage(player.getUniqueId(), damage);
+```
+
+Use `run.withinArena(position)` for arena-bound reset checks, `run.contributions()` for boss reward eligibility, and `run.wipe(reason)` or `run.reset(reason)` when consuming plugin logic detects a wipe/reset condition.
+
+## Optional Integrations
+
+Package: `dev.willram.ramcore.integration`
+
+RamCore integrations expose capability checks without making core modules depend on optional plugins. Most built-in providers detect Bukkit plugin presence and report declared capabilities; deeper adapters can be layered behind those checks.
+
+Primary types:
+
+- `IntegrationRegistry` stores providers, lists snapshots, and answers capability availability.
+- `IntegrationProvider` exposes one integration descriptor and current runtime snapshot.
+- `IntegrationDescriptor` declares id, plugin name, capabilities, and description.
+- `IntegrationCapability` describes supported surfaces such as permissions, economy, placeholders, regions, packets, NPCs, and custom items.
+- `PluginDetector` abstracts plugin lookup so detection is testable without Bukkit.
+- `StandardIntegrations` defines descriptors for LuckPerms, Vault, PlaceholderAPI, MiniPlaceholders, WorldGuard, ProtocolLib, Citizens, ItemsAdder, and Oraxen.
+- `ProtocolLibIntegrationProvider` exposes a guarded `ProtocolManager` accessor when ProtocolLib is available.
+- `Integrations` is the facade for custom or standard registries.
+
+Example:
+
+```java
+IntegrationRegistry integrations = Integrations.standard();
+
+if (integrations.supports(IntegrationCapability.ECONOMY)) {
+    // enable economy-backed rewards
+}
+
+IntegrationSnapshot vault = integrations.require(StandardIntegrations.VAULT.id()).snapshot();
+if (!vault.available()) {
+    getLogger().info("Vault unavailable: " + vault.message());
+}
+```
+
+Custom provider:
+
+```java
+IntegrationDescriptor descriptor = new IntegrationDescriptor(
+        IntegrationId.of("example"),
+        "ExamplePlugin",
+        EnumSet.of(IntegrationCapability.CUSTOM_ITEMS),
+        "Example custom item bridge"
+);
+
+integrations.register(new DetectedIntegrationProvider(descriptor, new BukkitPluginDetector()));
+```
+
+Use `Integrations.standard(detector)` in tests or custom bootstrap code when Bukkit's plugin manager should not be accessed directly.
+
 ## Commands
 
 Package: `dev.willram.ramcore.commands`
@@ -74,6 +567,7 @@ Primary types:
 - `CommandContext` wraps Brigadier's context and exposes sender, player, location, typed arguments, resolved selectors, messaging, and validation helpers.
 - `CommandExecutor` is the throwing functional interface for command execution.
 - `CommandSuggestionProvider` and `CommandSuggestions` provide reusable tab completion helpers.
+- `CommandCooldown` adds per-sender or custom-key cooldown guards.
 - `CommandInterruptException` cleanly stops execution and sends a sender-facing message.
 
 Public command API surface:
@@ -145,6 +639,29 @@ command.literal("give", give -> give
 
 If a player runs `/coins give Steve` without the amount, RamCore reports the missing `<amount>` argument and shows the example when one is available.
 
+### Command Cooldowns
+
+Attach a per-sender cooldown to an executable node:
+
+```java
+RamCommands.command("kit")
+        .literal("claim", claim -> claim
+                .cooldown(Cooldown.of(30, TimeUnit.SECONDS))
+                .executes(ctx -> {
+                    // give kit
+                }));
+```
+
+Use custom keys and messages when cooldown scope should not be per sender:
+
+```java
+CommandCooldown cooldown = CommandCooldown
+        .keyed(Cooldown.of(5, TimeUnit.MINUTES), ctx -> ctx.sender().getName() + ":daily")
+        .message((ctx, remainingMillis) -> "<red>Daily reward is still cooling down.");
+```
+
+Cooldowns run before command execution. For `executesAsync(...)`, cooldown rejection happens before async work is scheduled.
+
 ### Kotlin Command Example
 
 ```kotlin
@@ -205,6 +722,25 @@ RamCommands.command("staff")
 ```
 
 These requirements also affect generated help visibility. A console sender will not see `playerOnly()` branches, and a player without a node permission will not see that branch in generated help.
+
+Typed permission helpers:
+
+```java
+private static final PermissionNode ADMIN =
+        Permissions.node("example.admin", "<red>Staff only.");
+
+private static final PermissionNode RELOAD =
+        ADMIN.child("reload");
+
+private static final PermissionRequirement STAFF_OR_RELOAD =
+        Permissions.any(ADMIN, RELOAD);
+
+RamCommands.command("example")
+        .permissions(STAFF_OR_RELOAD)
+        .executes(ctx -> ctx.requirePermissions(STAFF_OR_RELOAD));
+```
+
+Use `PermissionRequirement.all(...)` when every node is required and `PermissionRequirement.any(...)` when any one node is enough.
 
 ### Suggestions
 
@@ -274,6 +810,18 @@ Use `TaskContext` where the target is not obvious:
 Schedulers.run(TaskContext.of(chunk), () -> updateChunkData(chunk));
 Schedulers.run(TaskContext.async(), this::saveCache);
 ```
+
+Use explicit scheduler anchors when passing scheduling intent around:
+
+```java
+TaskContext context = TaskContext.player(player);
+Schedulers.forContext(context).run(() -> updatePlayerState(player));
+
+TaskContext asyncContext = TaskContext.async();
+Schedulers.forContext(asyncContext).call(this::loadFromDisk);
+```
+
+`TaskContext#description()` gives concise diagnostics such as `global`, `async`, `entity:<uuid>`, `region:<world>@x,y,z`, or `chunk:<world>@x,z`.
 
 ## Promises
 
@@ -575,6 +1123,10 @@ Packages: `dev.willram.ramcore.datatree`, `dev.willram.ramcore.gson`, `dev.willr
 
 Primary types:
 
+- `BukkitConfig` loads typed Bukkit YAML configs with defaults, reloads, and validation.
+- `TypedConfig` is the loaded typed config view.
+- `ConfigKey<T>` declares a typed path, default or required value, and validators.
+- `ConfigValidationException` reports all invalid config values together.
 - `DataTree` reads nested JSON or Configurate data with path resolution.
 - `GsonDataTree` and `ConfigurateDataTree` are concrete tree implementations.
 - `GsonProvider` exposes configured standard and pretty-print Gson instances.
@@ -582,6 +1134,32 @@ Primary types:
 - `JsonBuilder` builds JSON objects and arrays.
 - `GsonConverter`, `MutableGsonConverter`, `ImmutableGsonConverter`, and `GsonConverters` support converter-based serialization.
 - `Configs` exposes shared Configurate serializers, currently including `Location`.
+
+Typed YAML example:
+
+```java
+private static final ConfigKey<String> PREFIX =
+        ConfigKey.of("messages.prefix", String.class, "<gold>[Example]</gold>");
+
+private static final ConfigKey<Integer> MAX_RETRIES =
+        ConfigKey.of("startup.max-retries", Integer.class, 3)
+                .validate(value -> value >= 0, "must be >= 0");
+
+private TypedConfig config;
+
+@Override
+public void load() {
+    this.config = BukkitConfig.load(getDataFolder().toPath().resolve("config.yml"), PREFIX, MAX_RETRIES);
+}
+
+@Override
+public void enable() {
+    String prefix = this.config.get(PREFIX);
+    int retries = this.config.get(MAX_RETRIES);
+}
+```
+
+Use `config.reload()` after editing the file. Reload reapplies defaults and throws `ConfigValidationException` if required values are missing or validators fail.
 
 Data tree example:
 
@@ -762,12 +1340,14 @@ Package: `dev.willram.ramcore.exception`
 
 Primary types:
 
+- `ApiMisuseException` reports invalid plugin usage of RamCore APIs with a problem and fix.
+- `RamPreconditions` provides fail-fast validation helpers for public APIs.
 - `RamExceptions` reports scheduler, event handler, and promise chain failures.
 - `InternalException` is the base runtime exception for RamCore internal wrappers.
 - `EventHandlerException`, `PromiseChainException`, and `SchedulerTaskException` represent subsystem failures.
 - `RamExceptionEvent` is fired when RamCore reports an exception.
 
-Most plugin code should not need to construct these directly; subscribe to `RamExceptionEvent` if you want centralized reporting.
+Most plugin code should not need to construct these directly; subscribe to `RamExceptionEvent` if you want centralized reporting. `ApiMisuseException` is intended to fail fast during development with a direct fix message.
 
 ## Kotlin Extensions
 
@@ -776,16 +1356,29 @@ Package: `dev.willram.ramcore.kotlin`
 Top-level helpers include:
 
 - `ramTypeToken<T>()`
+- `configKey<T>(path, defaultValue)`
+- `requiredConfigKey<T>(path)`
+- `bukkitConfig(path, vararg keys)`
 - `subscribe<T>()`
 - `merge<T>()`
 - `metadataKey<T>(id)`
+- `messageKey(id, defaultTemplate)`
+- `messageCatalog { ... }`
+- `parsedPlaceholder(...)`, `unparsedPlaceholder(...)`, and `componentPlaceholder(...)`
+- `permission(...)`, `permissionsAll(...)`, and `permissionsAny(...)`
 - `MetadataMap.value(...)`
 - `MetadataMap[key] = value`
 - `command("name") { ... }`
 - `Commands.register(...)`
 - command DSL `literal {}` and `argument {}` helpers
+- command cooldown helpers `cooldown(amount, unit)`, `cooldownTicks(ticks)`, and `cooldown(cooldown) { ctx -> key }`
 - `CommandContext[arg]`
 - `Entity.taskContext()`, `Location.taskContext()`, `Block.taskContext()`, `BlockState.taskContext()`, `Chunk.taskContext()`, and `World.chunkTaskContext(...)`
+- NPC helpers `npcSpec<T> { ... }`, `npcRegistry(plugin)`, and `Location.spawnNpc(spec)`
+- party helpers `partyOptions()`, `partyManager()`, and `partyManager(options)`
+- objective helpers `objectiveTracker()`, `objective(id) { ... }`, and `objectiveTask(...)`
+- encounter helpers `encounterRegistry()`, `encounter(id, maxHealth) { ... }`, `encounterPhase(...)`, and `encounterAbility(...)`
+- integration helpers `integrationRegistry()`, `standardIntegrations()`, and `standardIntegrations(detector)`
 
 Example:
 
@@ -805,6 +1398,20 @@ val spec = command("hello") {
 | --- | --- |
 | `dev.willram.ramcore` | Plugin base and RamCore plugin entry point. |
 | `commands` | Brigadier-first command API. |
+| `content` | Typed namespaced content registries with owner tracking. |
+| `display` | Display entity specs, region-safe spawning, and hologram stacks. |
+| `encounter` | Boss encounter definitions, phases, timed abilities, enrage/wipe/reset state, and contribution tracking. |
+| `integration` | Optional plugin capability detection for LuckPerms, Vault, placeholders, WorldGuard, ProtocolLib, Citizens, ItemsAdder, and Oraxen. |
+| `npc` | Server-backed NPC specs, click dispatch, visibility, and cleanup. |
+| `objective` | Storage-neutral objective definitions, subject progress, chained tasks, and progress events. |
+| `party` | In-memory party/group membership, invites, rules, contribution tracking, and teleport helpers. |
+| `service` | Typed service registry and dependency-aware lifecycle. |
+| `template` | Typed reusable templates with parent inheritance and validation. |
+| `message` | MiniMessage catalog, reusable keys, prefixes, and placeholders. |
+| `permission` | Typed permission nodes, grouped checks, and command requirements. |
+| `presentation` | Adventure message, title, sound, boss-bar, and sequence effects. |
+| `region` | Lightweight regions and priority rule evaluation. |
+| `reward` | Generic reward validation, preview, and execution pipeline. |
 | `scheduler` | Paper/Folia-aware scheduling and task contexts. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
