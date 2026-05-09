@@ -26,6 +26,7 @@
 package dev.willram.ramcore.event.filter;
 
 import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerEvent;
@@ -33,6 +34,9 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import org.jetbrains.annotations.NotNull;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
@@ -140,6 +144,44 @@ public final class EventFilters {
         return (Predicate<T>) IGNORE_SAME_CHUNK;
     }
 
+    @NotNull
+    public static <T> Predicate<T> always() {
+        return value -> true;
+    }
+
+    @NotNull
+    public static <T> Predicate<T> never() {
+        return value -> false;
+    }
+
+    @NotNull
+    @SafeVarargs
+    public static <T> Predicate<T> all(@NotNull Predicate<? super T>... predicates) {
+        Objects.requireNonNull(predicates, "predicates");
+        List<Predicate<? super T>> tests = List.of(predicates);
+        return value -> tests.stream().allMatch(predicate -> predicate.test(value));
+    }
+
+    @NotNull
+    @SafeVarargs
+    public static <T> Predicate<T> any(@NotNull Predicate<? super T>... predicates) {
+        Objects.requireNonNull(predicates, "predicates");
+        List<Predicate<? super T>> tests = List.of(predicates);
+        return value -> tests.stream().anyMatch(predicate -> predicate.test(value));
+    }
+
+    @NotNull
+    public static <T> Predicate<T> not(@NotNull Predicate<? super T> predicate) {
+        Objects.requireNonNull(predicate, "predicate");
+        return value -> !predicate.test(value);
+    }
+
+    @NotNull
+    public static <T extends Event, S extends T> Predicate<T> type(@NotNull Class<S> type) {
+        Objects.requireNonNull(type, "type");
+        return type::isInstance;
+    }
+
 //    /**
 //     * Returns a predicate which only returns true if the entity has a given metadata key
 //     *
@@ -174,6 +216,18 @@ public final class EventFilters {
     @NotNull
     public static <T extends PlayerEvent> Predicate<T> playerHasPermission(String permission) {
         return e -> e.getPlayer().hasPermission(permission);
+    }
+
+    @NotNull
+    public static <T extends PlayerEvent> Predicate<T> player(@NotNull UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+        return event -> event.getPlayer().getUniqueId().equals(playerId);
+    }
+
+    @NotNull
+    public static <T extends EntityEvent> Predicate<T> entity(@NotNull UUID entityId) {
+        Objects.requireNonNull(entityId, "entityId");
+        return event -> event.getEntity().getUniqueId().equals(entityId);
     }
 
     private EventFilters() {

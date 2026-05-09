@@ -58,7 +58,7 @@ public class Item {
 
     public Item(@NotNull Map<ClickType, Consumer<InventoryClickEvent>> handlers, @NotNull ItemStack itemStack) {
         this.handlers = ImmutableMap.copyOf(Objects.requireNonNull(handlers, "handlers"));
-        this.itemStack = Objects.requireNonNull(itemStack, "itemStack");
+        this.itemStack = Objects.requireNonNull(itemStack, "itemStack").clone();
     }
 
     /**
@@ -78,7 +78,12 @@ public class Item {
      */
     @NotNull
     public ItemStack getItemStack() {
-        return this.itemStack;
+        return this.itemStack.clone();
+    }
+
+    @NotNull
+    public MenuButton toButton() {
+        return MenuButton.fromItem(this);
     }
 
     /**
@@ -89,7 +94,7 @@ public class Item {
         private final Map<ClickType, Consumer<InventoryClickEvent>> handlers;
 
         private Builder(@NotNull ItemStack itemStack) {
-            this.itemStack = Objects.requireNonNull(itemStack, "itemStack");
+            this.itemStack = Objects.requireNonNull(itemStack, "itemStack").clone();
             this.handlers = new HashMap<>();
         }
 

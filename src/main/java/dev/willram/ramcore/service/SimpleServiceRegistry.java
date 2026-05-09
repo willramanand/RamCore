@@ -83,6 +83,19 @@ final class SimpleServiceRegistry implements ServiceRegistry {
         return Collections.unmodifiableSet(this.registrations.keySet());
     }
 
+    @NotNull
+    @Override
+    public List<ServiceDiagnostic> diagnostics() {
+        return this.registrations.values().stream()
+                .map(registration -> new ServiceDiagnostic(
+                        registration.key().id(),
+                        registration.key().type().getName(),
+                        registration.dependencies().stream().map(ServiceKey::id).toList(),
+                        this.state.name()
+                ))
+                .toList();
+    }
+
     @Override
     public void loadAll() {
         if (this.state != State.NEW) {

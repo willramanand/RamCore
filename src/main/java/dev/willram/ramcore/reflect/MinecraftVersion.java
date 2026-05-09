@@ -43,8 +43,8 @@ public final class MinecraftVersion implements Comparable<MinecraftVersion> {
             .comparingInt(MinecraftVersion::getMajor)
             .thenComparingInt(MinecraftVersion::getMinor)
             .thenComparingInt(MinecraftVersion::getBuild)
-            .thenComparing(Comparator.nullsLast(Comparator.comparing(MinecraftVersion::getDevelopmentStage)))
-            .thenComparing(Comparator.nullsFirst(Comparator.comparing(MinecraftVersion::getSnapshot)))
+            .thenComparing(MinecraftVersion::getDevelopmentStage, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(MinecraftVersion::getSnapshot, Comparator.nullsFirst(Comparator.naturalOrder()))
     );
 
     /**

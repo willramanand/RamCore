@@ -26,10 +26,14 @@ package dev.willram.ramcore.item;
  */
 
 import dev.willram.ramcore.menu.*;
+import dev.willram.ramcore.item.component.ItemComponentPatch;
+import dev.willram.ramcore.item.component.ItemComponentProfile;
+import dev.willram.ramcore.item.component.ItemComponents;
 import dev.willram.ramcore.pdc.PDCs;
+import dev.willram.ramcore.text.TextContext;
+import dev.willram.ramcore.text.Texts;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -94,13 +98,25 @@ public final class ItemStackBuilder {
     }
 
     public ItemStackBuilder name(String name) {
-        return transformMeta(meta -> meta.displayName(MiniMessage.miniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false)));
+        return name(name, TextContext.empty());
+    }
+
+    public ItemStackBuilder name(String name, TextContext context) {
+        return transformMeta(meta -> meta.displayName(Texts.item(name, context)));
     }
 
     public ItemStackBuilder lore(String line) {
         return transformMeta(meta -> {
             List<Component> lore = meta.lore() == null ? new ArrayList<>() : meta.lore();
-            lore.add(MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+            lore.add(Texts.item(line, TextContext.empty()));
+            meta.lore(lore);
+        });
+    }
+
+    public ItemStackBuilder lore(String line, TextContext context) {
+        return transformMeta(meta -> {
+            List<Component> lore = meta.lore() == null ? new ArrayList<>() : meta.lore();
+            lore.add(Texts.item(line, context));
             meta.lore(lore);
         });
     }
@@ -116,10 +132,14 @@ public final class ItemStackBuilder {
     }
 
     public ItemStackBuilder lore(String... lines) {
+        return lore(TextContext.empty(), lines);
+    }
+
+    public ItemStackBuilder lore(TextContext context, String... lines) {
         return transformMeta(meta -> {
             List<Component> newLore = new ArrayList<>();
             for (String line : lines) {
-                newLore.add(MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+                newLore.add(Texts.item(line, context));
             }
             meta.lore(newLore);
         });
@@ -201,6 +221,20 @@ public final class ItemStackBuilder {
     public ItemStackBuilder apply(Consumer<ItemStackBuilder> consumer) {
         consumer.accept(this);
         return this;
+    }
+
+    public ItemStackBuilder components(ItemComponentPatch patch) {
+        return transform(itemStack -> patch.apply(ItemComponents.edit(itemStack)));
+    }
+
+    public ItemStackBuilder components(ItemComponentProfile profile) {
+        return components(profile.patch());
+    }
+
+    public ItemStackBuilder components(Consumer<ItemComponentProfile.Builder> consumer) {
+        ItemComponentProfile.Builder builder = ItemComponents.profile();
+        consumer.accept(builder);
+        return components(builder.build());
     }
 
     public ItemStack build() {

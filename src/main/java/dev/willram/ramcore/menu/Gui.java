@@ -259,13 +259,10 @@ public abstract class Gui implements TerminableConsumer {
 
                     Item clickedItem = this.getItem(slotId);
                     if (clickedItem != null) {
-                        var handlers = clickedItem.getHandlers().entrySet();
-                        if (handlers == null) {
-                            return;
-                        }
-                        for (Map.Entry<ClickType, Consumer<InventoryClickEvent>> handler : handlers) {
+                        Consumer<InventoryClickEvent> handler = clickedItem.getHandlers().get(e.getClick());
+                        if (handler != null) {
                             try {
-                                handler.getValue().accept(e);
+                                handler.accept(e);
                             } catch (Exception ex) {
                                 ex.printStackTrace();
                             }

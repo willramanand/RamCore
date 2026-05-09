@@ -29,11 +29,16 @@ import com.google.common.reflect.TypeToken;
 import dev.willram.ramcore.event.functional.merged.MergedSubscriptionBuilder;
 import dev.willram.ramcore.event.functional.single.SingleSubscriptionBuilder;
 import dev.willram.ramcore.scheduler.Schedulers;
+import dev.willram.ramcore.terminable.TerminableConsumer;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * A functional event listening utility.
@@ -67,6 +72,72 @@ public final class Events {
         return SingleSubscriptionBuilder.newBuilder(eventClass, priority);
     }
 
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> lowest(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.LOWEST);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> low(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.LOW);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> normal(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.NORMAL);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> high(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.HIGH);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> highest(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.HIGHEST);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> monitor(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass, EventPriority.MONITOR);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> once(@NotNull Class<T> eventClass) {
+        return subscribe(eventClass).once();
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscriptionBuilder<T> filtered(@NotNull Class<T> eventClass, @NotNull Predicate<T> predicate) {
+        return subscribe(eventClass).filter(predicate);
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscription<T> listen(@NotNull Class<T> eventClass,
+                                                                 @NotNull Consumer<? super T> handler,
+                                                                 @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(subscribe(eventClass).handler(handler));
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscription<T> listen(@NotNull Class<T> eventClass,
+                                                                 @NotNull EventPriority priority,
+                                                                 @NotNull Predicate<T> filter,
+                                                                 @NotNull Consumer<? super T> handler,
+                                                                 @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(subscribe(eventClass, priority).filter(filter).handler(handler));
+    }
+
+    @NotNull
+    public static <T extends Event> SingleSubscription<T> listenOnce(@NotNull Class<T> eventClass,
+                                                                     @NotNull Consumer<? super T> handler,
+                                                                     @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(once(eventClass).handler(handler));
+    }
+
     /**
      * Makes a MergedSubscriptionBuilder for a given super type
      *
@@ -77,6 +148,11 @@ public final class Events {
     @NotNull
     public static <T> MergedSubscriptionBuilder<T> merge(@NotNull Class<T> handledClass) {
         return MergedSubscriptionBuilder.newBuilder(handledClass);
+    }
+
+    @NotNull
+    public static EventSubscriptionGroup group() {
+        return EventSubscriptionGroup.create();
     }
 
     /**

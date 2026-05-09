@@ -25,10 +25,13 @@
 
 package dev.willram.ramcore.scoreboard;
 
+import dev.willram.ramcore.text.TextContext;
+import dev.willram.ramcore.text.Texts;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 
 import org.jetbrains.annotations.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
@@ -71,6 +74,10 @@ public interface ScoreboardObjective {
      * @param displayName the new display name
      */
     void setDisplayName(String displayName);
+
+    default void setDisplayName(String displayName, TextContext context) {
+        setDisplayName(Texts.plain(displayName, context));
+    }
 
     /**
      * Gets the current display slot of this objective
@@ -118,6 +125,10 @@ public interface ScoreboardObjective {
      */
     void setScore(String name, int value);
 
+    default void setScore(String name, int value, TextContext context) {
+        setScore(Texts.plain(name, context), value);
+    }
+
     /**
      * Removes a score
      *
@@ -145,12 +156,20 @@ public interface ScoreboardObjective {
      */
     void applyLines(String... lines);
 
+    default void applyLines(TextContext context, String... lines) {
+        applyLines(context, Arrays.asList(lines));
+    }
+
     /**
      * Automatically applies a set of score lines to this objective.
      *
      * @param lines the lines to apply
      */
     void applyLines(Collection<String> lines);
+
+    default void applyLines(TextContext context, Collection<String> lines) {
+        applyLines(Texts.plainLines(lines, context));
+    }
 
     /**
      * Subscribes a player to this objective

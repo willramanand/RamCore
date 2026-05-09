@@ -1,7 +1,7 @@
 name: RamCore
 version: '1.0.0-SNAPSHOT'
 main: dev.willram.ramcore.RamCore
-api-version: '1.21'
+api-version: '26.1.2'
 folia-supported: true
 dependencies:
   server:

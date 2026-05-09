@@ -4,6 +4,8 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.willram.ramcore.permission.PermissionNode;
 import dev.willram.ramcore.permission.PermissionRequirement;
 import dev.willram.ramcore.permission.Permissions;
+import dev.willram.ramcore.text.TextContext;
+import dev.willram.ramcore.text.Texts;
 import io.papermc.paper.command.brigadier.argument.resolvers.ArgumentResolver;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
@@ -280,8 +282,16 @@ public class CommandContext {
         sender.sendRichMessage(message);
     }
 
+    public void msg(String message, TextContext context) {
+        sender.sendMessage(Texts.render(message, context));
+    }
+
     public void reply(String message) {
         msg(message);
+    }
+
+    public void reply(String message, TextContext context) {
+        msg(message, context);
     }
 
     public void msg(String... messages) {
@@ -300,6 +310,10 @@ public class CommandContext {
 
     public void msgOther(Player player, String message) {
         player.sendRichMessage(message);
+    }
+
+    public void msgOther(Player player, String message, TextContext context) {
+        player.sendMessage(Texts.render(message, context));
     }
 
     public void msgOther(Player player, String... messages) {

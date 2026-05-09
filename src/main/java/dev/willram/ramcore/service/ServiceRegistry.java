@@ -2,6 +2,7 @@ package dev.willram.ramcore.service;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,6 +29,9 @@ public interface ServiceRegistry extends AutoCloseable {
 
     @NotNull
     Set<ServiceKey<?>> keys();
+
+    @NotNull
+    List<ServiceDiagnostic> diagnostics();
 
     void loadAll();
 

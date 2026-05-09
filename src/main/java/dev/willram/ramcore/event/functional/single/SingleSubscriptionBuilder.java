@@ -30,6 +30,7 @@ import dev.willram.ramcore.event.SingleSubscription;
 import dev.willram.ramcore.event.functional.ExpiryTestStage;
 import dev.willram.ramcore.event.functional.SubscriptionBuilder;
 import dev.willram.ramcore.interfaces.Delegates;
+import dev.willram.ramcore.terminable.TerminableConsumer;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
@@ -105,6 +106,11 @@ public interface SingleSubscriptionBuilder<T extends Event> extends Subscription
     @Override
     SingleSubscriptionBuilder<T> filter(@NotNull Predicate<T> predicate);
 
+    @NotNull
+    default SingleSubscriptionBuilder<T> once() {
+        return expireAfter(1);
+    }
+
     /**
      * Add a expiry predicate.
      *
@@ -155,6 +161,12 @@ public interface SingleSubscriptionBuilder<T extends Event> extends Subscription
         return handlers().consumer(handler).register();
     }
 
+    @NotNull
+    default SingleSubscription<T> handler(@NotNull Consumer<? super T> handler, @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(handler(handler));
+    }
+
     /**
      * Builds and registers the Handler.
      *
@@ -165,6 +177,13 @@ public interface SingleSubscriptionBuilder<T extends Event> extends Subscription
     @NotNull
     default SingleSubscription<T> biHandler(@NotNull BiConsumer<SingleSubscription<T>, ? super T> handler) {
         return handlers().biConsumer(handler).register();
+    }
+
+    @NotNull
+    default SingleSubscription<T> biHandler(@NotNull BiConsumer<SingleSubscription<T>, ? super T> handler,
+                                            @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(biHandler(handler));
     }
     
 }

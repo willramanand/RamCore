@@ -31,6 +31,7 @@ import dev.willram.ramcore.event.MergedSubscription;
 import dev.willram.ramcore.event.functional.ExpiryTestStage;
 import dev.willram.ramcore.event.functional.SubscriptionBuilder;
 import dev.willram.ramcore.interfaces.Delegates;
+import dev.willram.ramcore.terminable.TerminableConsumer;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
@@ -140,6 +141,11 @@ public interface MergedSubscriptionBuilder<T> extends SubscriptionBuilder<T> {
     @Override
     MergedSubscriptionBuilder<T> filter(@NotNull Predicate<T> predicate);
 
+    @NotNull
+    default MergedSubscriptionBuilder<T> once() {
+        return expireAfter(1);
+    }
+
     /**
      * Add a expiry predicate.
      *
@@ -206,6 +212,12 @@ public interface MergedSubscriptionBuilder<T> extends SubscriptionBuilder<T> {
         return handlers().consumer(handler).register();
     }
 
+    @NotNull
+    default MergedSubscription<T> handler(@NotNull Consumer<? super T> handler, @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(handler(handler));
+    }
+
     /**
      * Builds and registers the Handler.
      *
@@ -217,6 +229,13 @@ public interface MergedSubscriptionBuilder<T> extends SubscriptionBuilder<T> {
     @NotNull
     default MergedSubscription<T> biHandler(@NotNull BiConsumer<MergedSubscription<T>, ? super T> handler) {
         return handlers().biConsumer(handler).register();
+    }
+
+    @NotNull
+    default MergedSubscription<T> biHandler(@NotNull BiConsumer<MergedSubscription<T>, ? super T> handler,
+                                            @NotNull TerminableConsumer owner) {
+        Objects.requireNonNull(owner, "owner");
+        return owner.bind(biHandler(handler));
     }
     
 }

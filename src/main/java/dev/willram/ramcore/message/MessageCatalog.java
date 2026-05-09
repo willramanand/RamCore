@@ -1,5 +1,6 @@
 package dev.willram.ramcore.message;
 
+import dev.willram.ramcore.text.TextContext;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -43,12 +44,26 @@ public final class MessageCatalog {
     }
 
     @NotNull
+    public Component render(@NotNull MessageKey key, @NotNull TextContext context) {
+        return render(key, requireNonNull(context, "context").resolver());
+    }
+
+    @NotNull
     public Component renderRaw(@NotNull MessageKey key, @NotNull TagResolver... placeholders) {
         return this.miniMessage.deserialize(template(key), TagResolver.resolver(placeholders));
     }
 
+    @NotNull
+    public Component renderRaw(@NotNull MessageKey key, @NotNull TextContext context) {
+        return renderRaw(key, requireNonNull(context, "context").resolver());
+    }
+
     public void send(@NotNull Audience audience, @NotNull MessageKey key, @NotNull TagResolver... placeholders) {
         requireNonNull(audience, "audience").sendMessage(render(key, placeholders));
+    }
+
+    public void send(@NotNull Audience audience, @NotNull MessageKey key, @NotNull TextContext context) {
+        requireNonNull(audience, "audience").sendMessage(render(key, context));
     }
 
     @NotNull

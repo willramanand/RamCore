@@ -1,5 +1,6 @@
 package dev.willram.ramcore.message;
 
+import dev.willram.ramcore.text.TextContext;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -34,6 +35,11 @@ public final class MessagePlaceholders {
         return placeholders.entrySet().stream()
                 .map(entry -> parsed(entry.getKey(), entry.getValue()))
                 .collect(TagResolver.toTagResolver());
+    }
+
+    @NotNull
+    public static TagResolver context(@NotNull TextContext context) {
+        return requireNonNull(context, "context").resolver();
     }
 
     private MessagePlaceholders() {
