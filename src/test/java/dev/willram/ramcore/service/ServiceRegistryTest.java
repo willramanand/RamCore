@@ -2,14 +2,15 @@ package dev.willram.ramcore.service;
 
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class ServiceRegistryTest {
 
@@ -61,7 +62,7 @@ public final class ServiceRegistryTest {
         assertSame(config, registry.get(CONFIG).orElseThrow());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void missingDependencyFailsFast() {
         TestContext context = new TestContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
@@ -69,10 +70,10 @@ public final class ServiceRegistryTest {
 
         registry.register(COMMANDS, new RecordingService("commands", context.events)).dependsOn(MESSAGES);
 
-        registry.loadAll();
+        assertThrows(IllegalStateException.class, registry::loadAll);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void cyclicDependencyFailsFast() {
         TestContext context = new TestContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
@@ -81,7 +82,7 @@ public final class ServiceRegistryTest {
         registry.register(CONFIG, new RecordingService("config", context.events)).dependsOn(COMMANDS);
         registry.register(COMMANDS, new RecordingService("commands", context.events)).dependsOn(CONFIG);
 
-        registry.loadAll();
+        assertThrows(IllegalStateException.class, registry::loadAll);
     }
 
     private static final class TestContext implements ServiceContext {

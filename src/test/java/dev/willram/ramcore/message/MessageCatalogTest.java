@@ -1,10 +1,10 @@
 package dev.willram.ramcore.message;
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class MessageCatalogTest {
     private static final MessageKey WELCOME =

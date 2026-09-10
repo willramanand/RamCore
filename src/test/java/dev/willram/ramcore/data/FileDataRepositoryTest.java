@@ -1,25 +1,24 @@
 package dev.willram.ramcore.data;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class FileDataRepositoryTest {
-    @Rule
-    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    Path tempDir;
 
     @Test
     public void savesAndLoadsJsonItemsByStringKey() throws Exception {
-        Path directory = temporaryFolder.newFolder("repo").toPath();
+        Path directory = Files.createDirectories(this.tempDir.resolve("repo"));
         FileDataRepository<String, Profile> repository = repository(directory);
         Profile profile = new Profile("will", 12);
 
@@ -38,7 +37,7 @@ public final class FileDataRepositoryTest {
 
     @Test
     public void queueSavePersistsDirtyItemAndFlushesOnClose() throws Exception {
-        Path directory = temporaryFolder.newFolder("queued").toPath();
+        Path directory = Files.createDirectories(this.tempDir.resolve("queued"));
         FileDataRepository<String, Profile> repository = repository(directory);
         Profile profile = new Profile("queued", 3);
         repository.add("queued", profile);
@@ -55,7 +54,7 @@ public final class FileDataRepositoryTest {
 
     @Test
     public void migrationsUpgradeVersionAndMarkItemDirty() throws Exception {
-        Path directory = temporaryFolder.newFolder("migrations").toPath();
+        Path directory = Files.createDirectories(this.tempDir.resolve("migrations"));
         FileDataRepository<String, Profile> repository = repository(directory);
         Profile profile = new Profile("legacy", 1);
         profile.dataVersion(1);
@@ -77,7 +76,7 @@ public final class FileDataRepositoryTest {
 
     @Test
     public void deleteRemovesMemoryAndFileState() throws Exception {
-        Path directory = temporaryFolder.newFolder("delete").toPath();
+        Path directory = Files.createDirectories(this.tempDir.resolve("delete"));
         FileDataRepository<String, Profile> repository = repository(directory);
         repository.add("remove-me", new Profile("remove-me", 1));
         repository.saveAll();
@@ -101,7 +100,7 @@ public final class FileDataRepositoryTest {
 
     @Test
     public void queueSaveDirtyOnlyQueuesDirtyItems() throws Exception {
-        Path directory = temporaryFolder.newFolder("dirty").toPath();
+        Path directory = Files.createDirectories(this.tempDir.resolve("dirty"));
         FileDataRepository<String, Profile> repository = repository(directory);
         Profile dirty = new Profile("dirty", 1);
         Profile clean = new Profile("clean", 1);

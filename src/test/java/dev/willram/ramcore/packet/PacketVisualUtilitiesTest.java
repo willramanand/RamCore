@@ -6,15 +6,15 @@ import dev.willram.ramcore.nms.api.NmsSupportStatus;
 import dev.willram.ramcore.reflect.MinecraftVersion;
 import dev.willram.ramcore.reflect.NmsVersion;
 import org.bukkit.inventory.EquipmentSlot;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class PacketVisualUtilitiesTest {
 

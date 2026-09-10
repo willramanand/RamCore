@@ -9,13 +9,13 @@ import dev.willram.ramcore.service.ServiceKey;
 import dev.willram.ramcore.service.ServiceRegistry;
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class PluginDiagnosticsTest {
     private static final ServiceKey<ExampleService> CONFIG = ServiceKey.of("config", ExampleService.class);
