@@ -208,8 +208,13 @@ final class RamPromise<V> implements Promise<V> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        this.cancelled.set(true);
-        return this.fut.cancel(mayInterruptIfRunning);
+        // only mark cancelled when the future actually transitioned: cancelling an already
+        // completed promise must not suppress continuations registered afterwards
+        boolean cancelled = this.fut.cancel(mayInterruptIfRunning);
+        if (cancelled) {
+            this.cancelled.set(true);
+        }
+        return cancelled;
     }
 
     @Override
@@ -680,7 +685,7 @@ final class RamPromise<V> implements Promise<V> {
 
         @Override
         public void run() {
-            if (RamPromise.this.cancelled.get()) {
+            if (RamPromise.this.cancelled.get() || this.promise.cancelled.get()) {
                 return;
             }
             try {
@@ -707,7 +712,7 @@ final class RamPromise<V> implements Promise<V> {
 
         @Override
         public void run() {
-            if (RamPromise.this.cancelled.get()) {
+            if (RamPromise.this.cancelled.get() || this.promise.cancelled.get()) {
                 return;
             }
             try {
@@ -743,7 +748,9 @@ final class RamPromise<V> implements Promise<V> {
 
         @Override
         public void run() {
-            if (RamPromise.this.cancelled.get()) {
+            // the upstream failure (including cancellation) is what this handler exists for;
+            // only a cancelled derived promise skips it
+            if (this.promise.cancelled.get()) {
                 return;
             }
             try {

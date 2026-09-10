@@ -100,6 +100,47 @@ public final class PromiseTest {
     }
 
     @Test
+    public void cancelAfterCompletionDoesNotPoisonLaterContinuations() {
+        Promise<Integer> promise = Promise.completed(1);
+
+        assertFalse(promise.cancel(), "cancelling a completed promise is a no-op");
+        Promise<Integer> derived = promise.thenApplySync(value -> value + 1);
+
+        assertTrue(derived.isDone());
+        assertEquals(2, derived.join());
+    }
+
+    @Test
+    public void cancellingDerivedPromiseSkipsItsContinuation() {
+        AtomicBoolean applied = new AtomicBoolean(false);
+        Promise<Integer> upstream = Promise.empty();
+        Promise<Integer> derived = upstream.thenApplySync(value -> {
+            applied.set(true);
+            return value;
+        });
+
+        derived.cancel();
+        upstream.supply(1);
+        this.scheduler.runAll();
+
+        assertTrue(derived.isCancelled());
+        assertFalse(applied.get());
+        assertEquals(1, upstream.join(), "upstream is unaffected by a derived cancel");
+    }
+
+    @Test
+    public void exceptionallyHandlerRunsWhenUpstreamIsCancelled() {
+        Promise<String> upstream = Promise.empty();
+        Promise<String> recovered = upstream.exceptionallySync(error -> "fallback");
+
+        upstream.cancel();
+        this.scheduler.runAll();
+
+        assertTrue(recovered.isDone(), "derived promise must not hang after an upstream cancel");
+        assertEquals("fallback", recovered.join());
+    }
+
+    @Test
     public void thenComposeAsyncChainsSecondPromise() {
         Promise<String> promise = Promise.completed(3)
                 .thenComposeAsync(value -> Promise.supplyingAsync(() -> "x" + value));
