@@ -10,6 +10,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * @deprecated since 2.1. Use {@code dev.willram.ramcore.store.CachedStore} via {@code Stores.cached(..)}:
+ * async, per-key ordered, with dirty tracking and migrations for any value type.
+ */
+@Deprecated(since = "2.1")
 public abstract class DataRepository<K, V extends DataItem> {
 
     protected Map<K, V> registry;

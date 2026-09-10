@@ -1,9 +1,12 @@
 package dev.willram.ramcore.store;
 
+import dev.willram.ramcore.data.DataKeyCodec;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Factory facade for stores.
@@ -45,6 +48,63 @@ public final class Stores {
     @NotNull
     public static <K, V> InMemoryStore<K, V> inMemory(@NotNull StoreMigrations<V> migrations) {
         return new InMemoryStore<>(migrations);
+    }
+
+    /**
+     * A file-per-key store under a directory.
+     *
+     * @param directory the directory; created on first write
+     * @param keyCodec  key to file name mapping
+     * @param codec     value serialiser
+     * @param <K>       key type
+     * @param <V>       value type
+     * @return the store
+     */
+    @NotNull
+    public static <K, V> FileStore<K, V> file(@NotNull Path directory, @NotNull DataKeyCodec<K> keyCodec, @NotNull StoreCodec<V> codec) {
+        return new FileStore<>(directory, keyCodec, codec, StoreMigrations.none());
+    }
+
+    /**
+     * A file-per-key store under a directory, applying migrations on load.
+     *
+     * @param directory  the directory; created on first write
+     * @param keyCodec   key to file name mapping
+     * @param codec      value serialiser
+     * @param migrations the migration chain
+     * @param <K>        key type
+     * @param <V>        value type
+     * @return the store
+     */
+    @NotNull
+    public static <K, V> FileStore<K, V> file(@NotNull Path directory, @NotNull DataKeyCodec<K> keyCodec, @NotNull StoreCodec<V> codec, @NotNull StoreMigrations<V> migrations) {
+        return new FileStore<>(directory, keyCodec, codec, migrations);
+    }
+
+    /**
+     * JSON files keyed by UUID, one per entry, using the Gson envelope codec.
+     *
+     * @param directory the directory
+     * @param type      the value type
+     * @param <V>       value type
+     * @return the store
+     */
+    @NotNull
+    public static <V> FileStore<UUID, V> jsonByUuid(@NotNull Path directory, @NotNull Class<V> type) {
+        return file(directory, DataKeyCodec.uuidKeys(), StoreCodec.gson(type));
+    }
+
+    /**
+     * JSON files keyed by string, one per entry, using the Gson envelope codec.
+     *
+     * @param directory the directory
+     * @param type      the value type
+     * @param <V>       value type
+     * @return the store
+     */
+    @NotNull
+    public static <V> FileStore<String, V> jsonByString(@NotNull Path directory, @NotNull Class<V> type) {
+        return file(directory, DataKeyCodec.stringKeys(), StoreCodec.gson(type));
     }
 
     /**

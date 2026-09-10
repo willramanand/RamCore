@@ -9,6 +9,11 @@ import java.util.concurrent.Executor;
 /**
  * Factory helpers for common repository implementations.
  */
+/**
+ * @deprecated since 2.1. Use {@code dev.willram.ramcore.store.Stores#jsonByUuid} / {@code #jsonByString}
+ * wrapped in {@code Stores.cached(..)}.
+ */
+@Deprecated(since = "2.1")
 public final class Repositories {
 
     @NotNull
