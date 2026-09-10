@@ -36,6 +36,10 @@ Integration modules detect and wrap external plugins or platform features. They 
 
 Examples are not a dependency boundary. Example modules document manual smoke-test surfaces and expected usage, but production behavior must live in core, optional, or integration packages.
 
+## Version Support Policy
+
+RamCore tracks the current Paper major line only. When Paper moves to a new line, the previous RamCore line gets a `release/<version>` branch that receives fixes only, for one Minecraft release cycle, on request. There is no Java 21 / Paper 1.21.x backport. Rationale and the surfaces that would need adapters if this ever changes are recorded in `decisions/ADR-0001-version-support-policy.md`.
+
 ## API Stability Levels
 
 | Level | Contract |

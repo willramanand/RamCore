@@ -1,6 +1,9 @@
 name: RamCore
-version: '1.0.0-SNAPSHOT'
+version: '${project.version}'
 main: dev.willram.ramcore.RamCore
+description: Paper/Folia plugin utility library with lifecycle, command, scheduling, event, data, GUI, and gameplay platform APIs.
+authors:
+  - willramanand
 api-version: '26.1.2'
 folia-supported: true
 dependencies:
