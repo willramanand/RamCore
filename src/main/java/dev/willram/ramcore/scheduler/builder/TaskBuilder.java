@@ -27,6 +27,7 @@ package dev.willram.ramcore.scheduler.builder;
 
 
 import dev.willram.ramcore.promise.ThreadContext;
+import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.scheduler.Scheduler;
 
 import org.jetbrains.annotations.NotNull;
@@ -64,7 +65,17 @@ public interface TaskBuilder {
     }
 
     /**
-     * Marks that the new task should run sync,
+     * Starts a chain anchored to a {@link TaskContext}: global, async, entity, region, or chunk.
+     * This is the Folia-correct entry point for work that touches world or entity state.
+     *
+     * @param context the context to run on
+     * @return a builder for that context
+     */
+    @NotNull
+    ThreadContextual on(@NotNull TaskContext context);
+
+    /**
+     * Marks that the new task should run sync (the global region thread),
      * and returns the next builder in the chain.
      *
      * @return a "sync" contextual builder

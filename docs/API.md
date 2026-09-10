@@ -1086,6 +1086,21 @@ Schedulers.forContext(asyncContext).call(this::loadFromDisk);
 
 `TaskContext#description()` gives concise diagnostics such as `global`, `async`, `entity:<uuid>`, `region:<world>@x,y,z`, or `chunk:<world>@x,z`.
 
+The fluent builder accepts a `TaskContext` too, which is the Folia-correct way to build region or entity chains:
+
+```java
+Schedulers.builder().on(TaskContext.of(location)).after(20L).run(() -> block.setType(Material.AIR));
+Schedulers.builder().on(TaskContext.of(entity)).every(5L).run(() -> entity.setFireTicks(0));
+```
+
+Raw dispatch without a `Promise`, for library code that manages its own completion: `Schedulers.execute(context, runnable, retired)` and `Schedulers.executeLater(context, runnable, retired, delayTicks)`. `retired` runs instead of `runnable` when an entity context's entity was removed first; other contexts never call it.
+
+Repeating tasks keep running when their body throws; each failure is reported through `RamExceptions` and `Task#getTimesRan()` counts completed runs only. A task may `stop()` itself from inside its body.
+
+Lifecycle: `RamPlugin` cancels its own scheduled tasks on disable. The shared static executors behind `RamExecutors` belong to the plugin that provides the RamCore classes; consumer plugins that extend `RamPlugin` leave them running when they disable.
+
+`ServerThreadLock` is deprecated: it parks the global tick thread from another thread, which is unsafe on Folia (obtaining it there throws `ApiMisuseException`) and stalls every region on Paper. Replace it with `Schedulers.call(TaskContext.of(entity), callable).join()` from async code, or a `TaskContext`-anchored `Promise` continuation.
+
 ### Testing With `FakeScheduler`
 
 Stability: experimental (moves to the published `ramcore-test` artifact in task 2.2). Folia-safe: not applicable, test-only.
@@ -1189,32 +1204,46 @@ Use providers for project-specific content lists, template/config validation, lo
 
 Package: `dev.willram.ramcore.promise`
 
-`Promise<V>` is a server-thread-aware future abstraction. It resembles `CompletableFuture`, but every continuation declares sync or async intent.
+Stability: stable. Folia: safe by design when continuations name a `TaskContext`; `ThreadContext.SYNC` means the **global region thread**, which on Folia does not own any entity or block.
+
+`Promise<V>` is a server-thread-aware future abstraction. It resembles `CompletableFuture`, but every continuation declares where it runs.
 
 Primary types:
 
 - `Promise<V>` represents an eventually supplied value.
-- `ThreadContext` is `SYNC` or `ASYNC`.
+- `ThreadContext` is `SYNC` (global thread) or `ASYNC`.
+- `TaskContext` (from `scheduler`) names a global, async, entity, region, or chunk anchor.
 
 Creation:
 
 ```java
 Promise<String> p = Promise.supplyingAsync(() -> loadNameFromDisk(uuid));
+Promise<Double> health = Promise.supplying(TaskContext.of(entity), entity::getHealth);
 Promise<Void> started = Promise.start();
 Promise<Integer> complete = Promise.completed(5);
 Promise<Integer> failed = Promise.exceptionally(new IllegalStateException("failed"));
 ```
 
-Continuation:
+Continuation. Prefer the `TaskContext` overloads whenever the step touches an entity, block, or world; the `Sync`/`Async` suffixed methods are fine for pure computation and for global-thread work:
 
 ```java
 Promise.supplyingAsync(() -> loadProfile(uuid))
-        .thenAcceptSync(profile -> player.sendMessage(profile.displayName()))
-        .exceptionallySync(error -> {
+        .thenAccept(TaskContext.of(player), profile -> player.sendMessage(profile.displayName()))
+        .exceptionally(TaskContext.of(player), error -> {
             player.sendRichMessage("<red>Failed to load profile.");
             return null;
         });
 ```
+
+Every continuation family has a `TaskContext` form: `supply`, `supplyDelayed`, `supplyExceptionally`, `thenApply`, `thenApplyDelayed`, `thenAccept`, `thenAcceptDelayed`, `thenRun`, `thenRunDelayed`, `thenCompose`, `exceptionally`, `exceptionallyDelayed`, plus the static `supplying`, `supplyingDelayed`, and `supplyingExceptionally`.
+
+Semantics worth knowing:
+
+- Global-thread work already on the global thread runs inline; everything else is queued for its owner. Entity and region work always waits at least one tick, like Paper's schedulers.
+- An entity-anchored step whose entity is removed before it runs completes the promise exceptionally with `EntityRetiredException` (carries the entity id). Chains never hang on a missing entity.
+- `cancel()` only succeeds while the promise is incomplete; cancelling a finished promise is a no-op and does not affect continuations registered later. Cancelling a derived promise skips its function. An `exceptionally` handler runs for upstream cancellation (`CancellationException`), matching `CompletableFuture`.
+- Exceptions thrown inside a step are reported through `RamExceptions` (with the cause) and propagate to the derived promise.
+- `thenComposeDelayedSync(ThreadContext, ..)` was misnamed and is deprecated; use `thenComposeDelayed(ThreadContext, ..)`.
 
 Use `toCompletableFuture()` when interoperating with APIs that expect JDK futures.
 

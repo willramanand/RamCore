@@ -8,6 +8,7 @@ import dev.willram.ramcore.service.ServiceRegistry;
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import dev.willram.ramcore.terminable.module.TerminableModule;
 import dev.willram.ramcore.time.Time;
+import dev.willram.ramcore.utils.LoaderUtils;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -65,7 +66,12 @@ public abstract class RamPlugin extends JavaPlugin implements ServiceContext {
         // terminate the registry
         this.terminableRegistry.closeAndReportException();
         Schedulers.shutdown(this);
-        RamExecutors.shutdown();
+        // RamExecutors is static state shared by every plugin that extends RamPlugin; only the
+        // plugin that provides the RamCore classes may shut it down, otherwise disabling any
+        // consumer plugin would kill the executor for all of them
+        if (ownsSharedExecutors()) {
+            RamExecutors.shutdown();
+        }
 
         startTime = Time.nowMillis() - startTime;
         this.log("<gold>=== <red>DISABLE <green>COMPLETE <light_purple>" + startTime + "ms <gold>===");
@@ -107,4 +113,15 @@ public abstract class RamPlugin extends JavaPlugin implements ServiceContext {
     }
 
     public abstract void registerCommands(@NotNull Commands commands);
+
+    /**
+     * Whether this plugin instance provides the RamCore classes and therefore owns the static
+     * scheduler executors. Consumer plugins that extend {@link RamPlugin} share those executors
+     * and must leave them running when they disable.
+     *
+     * @return true if this plugin is the one RamCore itself was loaded from
+     */
+    protected boolean ownsSharedExecutors() {
+        return LoaderUtils.pluginIfBound().filter(plugin -> plugin == this).isPresent();
+    }
 }

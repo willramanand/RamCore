@@ -122,6 +122,8 @@ Recommendation: **switch to Gradle Kotlin DSL as the first commit of 2.2**, befo
 
 Docs: `API.md` Scheduling section gains "Testing with FakeScheduler". Stability: `FakeScheduler` experimental until 2.1b publishes it.
 
+**Outcome (done 2026-09-10).** Both PRs landed as two commits on `phase/a-test-foundation`. 211 tests on JUnit 5 after PR 2 (196 migrated + 15 new). `Gui`'s dead reflect import was removed here instead of in 2.2. `ApiBoundaryTest` carries an exemption list for the known 2.2 moves (`event.ProtocolSubscription`, `ProtocolLibIntegrationProvider`, `nms.api` → `reflect` value types). `ProxyFakes` is adopted by the new tests only; the 15 existing hand-rolled proxies switch over as their files are next touched.
+
 ### 2.3 Scheduler and Promise audit — **L** (1 PR per finding group)
 
 Audit `Promise.java` (1,449 lines), `RamPromise.java` (758), `Schedulers.java` (1,104), `PaperFoliaSchedulerBackend.java`, `threadlock/`. Seeded findings from the survey; each becomes a regression test on `FakeScheduler` before its fix:
@@ -139,6 +141,8 @@ Audit `Promise.java` (1,449 lines), `RamPromise.java` (758), `Schedulers.java` (
 | A9 | `RamAsyncExecutor` / `Schedulers.shutdown(plugin)` cancel tasks by plugin: verify entity/region tasks are cancelled on disable (Paper's schedulers are per-plugin; confirm every backend call passes the owning plugin). | Test via a recording fake backend. |
 
 Also in scope: reduce `Promise.java` overload sprawl only if it falls out naturally from A1 (do not refactor for its own sake). Docs: `API.md` Promises section rewritten around `TaskContext`-anchored continuations; Folia note per method family.
+
+**Outcome (done 2026-09-10, branch `phase/a-test-foundation`).** A1, A2, A5, A8 implemented with tests. A3 fixed via `RamPlugin.ownsSharedExecutors()` (not unit-testable off-server; verify on the next Paper smoke run by disabling a consumer plugin and checking `RamExecutors.asyncHelper()` still runs). A4 deprecated with a Folia guard. A6: causes are now logged (`RamLog.severe` with throwable); each step reports exactly once; covered by `PromiseTest`. A7 covered by `FakeSchedulerTest` (self-stopping timer, throwing repeating body). A9 documented: Paper cancels global/async tasks per plugin and drops entity/region tasks of disabled plugins; nothing to change. Three bugs found beyond the seeded list, all fixed and tested: cancel-after-completion poisoned later continuations, cancelling a derived promise did not skip its function, and `exceptionally` never ran for an upstream cancellation so derived promises hung.
 
 ---
 

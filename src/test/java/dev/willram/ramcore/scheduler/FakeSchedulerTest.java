@@ -143,6 +143,55 @@ public final class FakeSchedulerTest {
     }
 
     @Test
+    public void timerStoppingItselfFromInsideStopsAfterCurrentRun() {
+        AtomicInteger runs = new AtomicInteger();
+
+        Schedulers.runTimer(TaskContext.global(), task -> {
+            if (runs.incrementAndGet() == 3) {
+                task.stop();
+            }
+        }, 1L, 1L);
+
+        this.scheduler.tick(10);
+
+        assertEquals(3, runs.get());
+        assertEquals(0, this.scheduler.pendingScheduled());
+    }
+
+    @Test
+    public void throwingRepeatingTaskKeepsRunningAndReportsEachFailure() {
+        AtomicInteger runs = new AtomicInteger();
+
+        Task task = Schedulers.runTimer(TaskContext.global(), () -> {
+            runs.incrementAndGet();
+            throw new IllegalStateException("tick " + runs.get());
+        }, 1L, 1L);
+
+        this.scheduler.tick(3);
+
+        assertEquals(3, runs.get(), "a throwing body does not stop the timer");
+        assertFalse(task.isClosed());
+        assertEquals(0, task.getTimesRan(), "failed runs are not counted as completed");
+        // RamTask reports each failure through RamExceptions itself; the backend never sees them
+        assertTrue(this.scheduler.errors().isEmpty());
+    }
+
+    @Test
+    public void builderAnchorsToTaskContext() {
+        AtomicBoolean ran = new AtomicBoolean(false);
+        Location location = new Location(null, 0, 0, 0);
+
+        Promise<Void> promise = Schedulers.builder().on(TaskContext.of(location)).after(2L).run(() -> ran.set(true));
+
+        this.scheduler.tick();
+        assertFalse(ran.get());
+        this.scheduler.tick();
+        assertTrue(ran.get());
+        assertTrue(promise.isDone());
+        assertEquals(List.of("region:?@0,0,0"), this.scheduler.executed());
+    }
+
+    @Test
     public void throwingTaskIsRecordedAndDoesNotStopTheScheduler() {
         AtomicBoolean after = new AtomicBoolean(false);
 
