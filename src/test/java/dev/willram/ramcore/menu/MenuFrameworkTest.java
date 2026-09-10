@@ -1,5 +1,6 @@
 package dev.willram.ramcore.menu;
 
+import dev.willram.ramcore.testkit.FakeItemStack;
 import dev.willram.ramcore.exception.ApiMisuseException;
 import net.kyori.adventure.text.Component;
 import org.bukkit.event.inventory.ClickType;
@@ -100,14 +101,4 @@ public final class MenuFrameworkTest {
         return new FakeItemStack();
     }
 
-    private static final class FakeItemStack extends ItemStack {
-        private FakeItemStack() {
-            super();
-        }
-
-        @Override
-        public ItemStack clone() {
-            return new FakeItemStack();
-        }
-    }
 }

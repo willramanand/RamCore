@@ -31,7 +31,7 @@ import dev.willram.ramcore.exception.types.EventHandlerException;
 import dev.willram.ramcore.exception.types.PromiseChainException;
 import dev.willram.ramcore.exception.types.SchedulerTaskException;
 import dev.willram.ramcore.interfaces.Delegate;
-import dev.willram.ramcore.utils.LoaderUtils;
+import dev.willram.ramcore.utils.RamLog;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -46,10 +46,13 @@ public final class RamExceptions {
             ThreadLocal.withInitial(() -> new AtomicBoolean(false));
 
     private static void log(InternalException exception) {
-        // print to logger
-        LoaderUtils.getPlugin().log(exception.getMessage());
+        // print to logger, with the cause so the failing frame is visible
+        RamLog.severe(exception.getMessage(), exception.getCause());
 
-        // call event
+        // call event, only when a server is present
+        if (!RamLog.pluginBound()) {
+            return;
+        }
         AtomicBoolean firing = NOT_TODAY_STACK_OVERFLOW_EXCEPTION.get();
         if (firing.compareAndSet(false, true)) {
             try {

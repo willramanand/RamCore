@@ -24,6 +24,12 @@ final class PaperFoliaSchedulerBackend implements SchedulerBackend {
     }
 
     @Override
+    public boolean isSyncThread(@NotNull Thread thread) {
+        Objects.requireNonNull(thread, "thread");
+        return thread == LoaderUtils.getMainThread();
+    }
+
+    @Override
     public void executeSync(@NotNull Runnable runnable) {
         Objects.requireNonNull(runnable, "runnable");
         Runnable task = RamExceptions.wrapSchedulerTask(runnable);

@@ -1086,6 +1086,40 @@ Schedulers.forContext(asyncContext).call(this::loadFromDisk);
 
 `TaskContext#description()` gives concise diagnostics such as `global`, `async`, `entity:<uuid>`, `region:<world>@x,y,z`, or `chunk:<world>@x,z`.
 
+### Testing With `FakeScheduler`
+
+Stability: experimental (moves to the published `ramcore-test` artifact in task 2.2). Folia-safe: not applicable, test-only.
+
+Every `Schedulers` and `Promise` call dispatches through a `SchedulerBackend` held by `SchedulerBackends` (both `@ApiStatus.Internal`). Tests install `FakeScheduler`, a deterministic tick-stepped backend, so scheduler and promise code runs without a server:
+
+```java
+private FakeScheduler scheduler;
+
+@BeforeEach
+void install() {
+    scheduler = FakeScheduler.install();   // replaces the Paper/Folia backend
+}
+
+@AfterEach
+void restore() {
+    scheduler.close();                     // restores it
+}
+
+@Test
+void savesAfterTick() {
+    Promise<Integer> promise = Promise.supplyingAsync(() -> 2).thenApplySync(v -> v * 21);
+
+    scheduler.runAsync();   // drains the async queue; sync continuations queue up
+    scheduler.tick();       // advances one tick and runs global/region/entity work
+    assertEquals(42, promise.join());
+    assertEquals(List.of("async", "global"), scheduler.executed());
+}
+```
+
+Rules the fake mirrors from the server backend: immediate global work runs inline when already on the sync thread (the thread that created the fake); delayed, repeating, region, and entity work waits at least one tick; a retired entity's work runs its retired callback instead. Driving methods: `tick()`, `tick(n)`, `runAsync()`, `runAll()`, `retireEntity(uuid)`. Observation: `executed()` (context descriptions in order), `errors()` (throwables raised by tasks, also reported through `RamExceptions`), `pendingSync()`, `pendingAsync()`, `pendingScheduled()`.
+
+Off-server, `RamExceptions` logs through `RamLog`, which falls back to a plain JDK logger when no plugin is bound, and skips firing `RamExceptionEvent`.
+
 ## Diagnostics
 
 Package: `dev.willram.ramcore.diagnostics`
