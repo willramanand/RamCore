@@ -1,5 +1,6 @@
 package dev.willram.ramcore.scheduler;
 
+import dev.willram.ramcore.exception.types.EntityRetiredException;
 import dev.willram.ramcore.promise.Promise;
 import dev.willram.ramcore.testkit.FakeScheduler;
 import dev.willram.ramcore.testkit.ProxyFakes;
@@ -12,11 +13,14 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -117,7 +121,8 @@ public final class FakeSchedulerTest {
 
         assertTrue(retired.get());
         assertFalse(ran.get());
-        assertTrue(promise.isCancelled());
+        assertTrue(promise.isDone());
+        assertInstanceOf(EntityRetiredException.class, assertThrows(CompletionException.class, promise::join).getCause());
     }
 
     @Test
@@ -133,7 +138,8 @@ public final class FakeSchedulerTest {
         this.scheduler.tick();
 
         assertFalse(ran.get());
-        assertTrue(promise.isCancelled(), "entity-bound promise cancels when the entity is retired");
+        assertTrue(promise.isDone(), "entity-bound promise completes when the entity is retired");
+        assertInstanceOf(EntityRetiredException.class, assertThrows(CompletionException.class, promise::join).getCause());
     }
 
     @Test

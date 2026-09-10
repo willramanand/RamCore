@@ -26,6 +26,7 @@
 package dev.willram.ramcore.promise;
 
 import dev.willram.ramcore.interfaces.Delegates;
+import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.terminable.Terminable;
 
 import org.jetbrains.annotations.NotNull;
@@ -153,6 +154,53 @@ public interface Promise<V> extends Future<V>, Terminable {
     static <U> Promise<U> supplyingAsync(@NotNull Supplier<U> supplier) {
         Promise<U> p = empty();
         return p.supplyAsync(supplier);
+    }
+
+    /**
+     * Returns a new Promise, and schedules the supplier on the given {@link TaskContext}.
+     *
+     * <p>On Folia this is the only way to supply a promise from an entity's or region's own
+     * thread; {@link ThreadContext#SYNC} means the global region thread.</p>
+     *
+     * @param context  where to run the supplier: global, async, entity, region, or chunk
+     * @param supplier the value supplier
+     * @param <U>      the result type
+     * @return the promise
+     */
+    @NotNull
+    static <U> Promise<U> supplying(@NotNull TaskContext context, @NotNull Supplier<U> supplier) {
+        Promise<U> p = empty();
+        return p.supply(context, supplier);
+    }
+
+    /**
+     * Returns a new Promise, and schedules the supplier on the given {@link TaskContext} after a delay.
+     *
+     * @param context    where to run the supplier
+     * @param supplier   the value supplier
+     * @param delayTicks the delay in ticks
+     * @param <U>        the result type
+     * @return the promise
+     */
+    @NotNull
+    static <U> Promise<U> supplyingDelayed(@NotNull TaskContext context, @NotNull Supplier<U> supplier, long delayTicks) {
+        Promise<U> p = empty();
+        return p.supplyDelayed(context, supplier, delayTicks);
+    }
+
+    /**
+     * Returns a new Promise, and schedules the callable on the given {@link TaskContext}.
+     * A thrown exception completes the promise exceptionally.
+     *
+     * @param context  where to run the callable
+     * @param callable the value callable
+     * @param <U>      the result type
+     * @return the promise
+     */
+    @NotNull
+    static <U> Promise<U> supplyingExceptionally(@NotNull TaskContext context, @NotNull Callable<U> callable) {
+        Promise<U> p = empty();
+        return p.supplyExceptionally(context, callable);
     }
 
     /**
@@ -1193,12 +1241,10 @@ public interface Promise<V> extends Future<V>, Terminable {
      * @return the new promise
      */
     @NotNull
+    @Deprecated(since = "2.1")
     default <U> Promise<U> thenComposeDelayedSync(@NotNull ThreadContext context, @NotNull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
-        return switch (context) {
-            case SYNC -> thenComposeDelayedSync(fn, delayTicks);
-            case ASYNC -> thenComposeDelayedAsync(fn, delayTicks);
-            default -> throw new AssertionError();
-        };
+        // misnamed: dispatches on the context. Use thenComposeDelayed(ThreadContext, fn, delayTicks).
+        return thenComposeDelayed(context, fn, delayTicks);
     }
 
     /**
@@ -1214,12 +1260,10 @@ public interface Promise<V> extends Future<V>, Terminable {
      * @return the new promise
      */
     @NotNull
+    @Deprecated(since = "2.1")
     default <U> Promise<U> thenComposeDelayedSync(@NotNull ThreadContext context, @NotNull Function<? super V, ? extends Promise<U>> fn, long delay, @NotNull TimeUnit unit) {
-        return switch (context) {
-            case SYNC -> thenComposeDelayedSync(fn, delay, unit);
-            case ASYNC -> thenComposeDelayedAsync(fn, delay, unit);
-            default -> throw new AssertionError();
-        };
+        // misnamed: dispatches on the context. Use thenComposeDelayed(ThreadContext, fn, delay, unit).
+        return thenComposeDelayed(context, fn, delay, unit);
     }
 
     /**
@@ -1445,5 +1489,196 @@ public interface Promise<V> extends Future<V>, Terminable {
      * does not interoperate with CompletableFuture
      */
     CompletableFuture<V> toCompletableFuture();
+
+    // ---- TaskContext-anchored API (Folia-aware) ----
+    //
+    // ThreadContext knows only SYNC (the global region thread) and ASYNC. On Folia, work that
+    // touches an entity or a location must run on that entity's or region's own thread, which
+    // only a TaskContext can name. Entity-anchored steps complete exceptionally with
+    // EntityRetiredException when the entity is removed before the step runs, so chains never
+    // hang.
+
+    /**
+     * Schedules the supplier on the given {@link TaskContext} to supply this promise.
+     *
+     * @param context  where to run the supplier
+     * @param supplier the value supplier
+     * @return this promise
+     */
+    @NotNull
+    Promise<V> supply(@NotNull TaskContext context, @NotNull Supplier<V> supplier);
+
+    /**
+     * Schedules the supplier on the given {@link TaskContext} after a delay.
+     *
+     * @param context    where to run the supplier
+     * @param supplier   the value supplier
+     * @param delayTicks the delay in ticks
+     * @return this promise
+     */
+    @NotNull
+    Promise<V> supplyDelayed(@NotNull TaskContext context, @NotNull Supplier<V> supplier, long delayTicks);
+
+    /**
+     * Schedules the callable on the given {@link TaskContext}; a thrown exception completes this
+     * promise exceptionally.
+     *
+     * @param context  where to run the callable
+     * @param callable the value callable
+     * @return this promise
+     */
+    @NotNull
+    Promise<V> supplyExceptionally(@NotNull TaskContext context, @NotNull Callable<V> callable);
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, applies the function on the
+     * given {@link TaskContext}.
+     *
+     * @param context where to run the function
+     * @param fn      the function
+     * @param <U>     the result type
+     * @return the new promise
+     */
+    @NotNull
+    <U> Promise<U> thenApply(@NotNull TaskContext context, @NotNull Function<? super V, ? extends U> fn);
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, applies the function on the
+     * given {@link TaskContext} after a delay.
+     *
+     * @param context    where to run the function
+     * @param fn         the function
+     * @param delayTicks the delay in ticks
+     * @param <U>        the result type
+     * @return the new promise
+     */
+    @NotNull
+    <U> Promise<U> thenApplyDelayed(@NotNull TaskContext context, @NotNull Function<? super V, ? extends U> fn, long delayTicks);
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, runs the action on the
+     * given {@link TaskContext}.
+     *
+     * @param context where to run the action
+     * @param action  the action
+     * @return the new promise
+     */
+    @NotNull
+    default Promise<Void> thenAccept(@NotNull TaskContext context, @NotNull Consumer<? super V> action) {
+        return thenApply(context, Delegates.consumerToFunction(action));
+    }
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, runs the action on the
+     * given {@link TaskContext} after a delay.
+     *
+     * @param context    where to run the action
+     * @param action     the action
+     * @param delayTicks the delay in ticks
+     * @return the new promise
+     */
+    @NotNull
+    default Promise<Void> thenAcceptDelayed(@NotNull TaskContext context, @NotNull Consumer<? super V> action, long delayTicks) {
+        return thenApplyDelayed(context, Delegates.consumerToFunction(action), delayTicks);
+    }
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, runs the action on the
+     * given {@link TaskContext}.
+     *
+     * @param context where to run the action
+     * @param action  the action
+     * @return the new promise
+     */
+    @NotNull
+    default Promise<Void> thenRun(@NotNull TaskContext context, @NotNull Runnable action) {
+        return thenApply(context, Delegates.runnableToFunction(action));
+    }
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, runs the action on the
+     * given {@link TaskContext} after a delay.
+     *
+     * @param context    where to run the action
+     * @param action     the action
+     * @param delayTicks the delay in ticks
+     * @return the new promise
+     */
+    @NotNull
+    default Promise<Void> thenRunDelayed(@NotNull TaskContext context, @NotNull Runnable action, long delayTicks) {
+        return thenApplyDelayed(context, Delegates.runnableToFunction(action), delayTicks);
+    }
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, applies the function on the
+     * given {@link TaskContext} and completes with the returned promise's result.
+     *
+     * @param context where to run the function
+     * @param fn      the function returning the next promise
+     * @param <U>     the result type
+     * @return the new promise
+     */
+    @NotNull
+    <U> Promise<U> thenCompose(@NotNull TaskContext context, @NotNull Function<? super V, ? extends Promise<U>> fn);
+
+    /**
+     * Returns a new Promise that, when this promise completes exceptionally, applies the function
+     * on the given {@link TaskContext} to recover.
+     *
+     * @param context where to run the function
+     * @param fn      the recovery function
+     * @return the new promise
+     */
+    @NotNull
+    Promise<V> exceptionally(@NotNull TaskContext context, @NotNull Function<Throwable, ? extends V> fn);
+
+    /**
+     * Returns a new Promise that, when this promise completes exceptionally, applies the function
+     * on the given {@link TaskContext} after a delay to recover.
+     *
+     * @param context    where to run the function
+     * @param fn         the recovery function
+     * @param delayTicks the delay in ticks
+     * @return the new promise
+     */
+    @NotNull
+    Promise<V> exceptionallyDelayed(@NotNull TaskContext context, @NotNull Function<Throwable, ? extends V> fn, long delayTicks);
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, applies the function on the
+     * given {@link ThreadContext} after a delay and completes with the returned promise's result.
+     *
+     * @param context    the thread context
+     * @param fn         the function returning the next promise
+     * @param delayTicks the delay in ticks
+     * @param <U>        the result type
+     * @return the new promise
+     */
+    @NotNull
+    default <U> Promise<U> thenComposeDelayed(@NotNull ThreadContext context, @NotNull Function<? super V, ? extends Promise<U>> fn, long delayTicks) {
+        return switch (context) {
+            case SYNC -> thenComposeDelayedSync(fn, delayTicks);
+            case ASYNC -> thenComposeDelayedAsync(fn, delayTicks);
+        };
+    }
+
+    /**
+     * Returns a new Promise that, when this promise completes normally, applies the function on the
+     * given {@link ThreadContext} after a delay and completes with the returned promise's result.
+     *
+     * @param context the thread context
+     * @param fn      the function returning the next promise
+     * @param delay   the delay
+     * @param unit    the delay unit
+     * @param <U>     the result type
+     * @return the new promise
+     */
+    @NotNull
+    default <U> Promise<U> thenComposeDelayed(@NotNull ThreadContext context, @NotNull Function<? super V, ? extends Promise<U>> fn, long delay, @NotNull TimeUnit unit) {
+        return switch (context) {
+            case SYNC -> thenComposeDelayedSync(fn, delay, unit);
+            case ASYNC -> thenComposeDelayedAsync(fn, delay, unit);
+        };
+    }
 
 }

@@ -29,9 +29,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import dev.willram.ramcore.exception.RamExceptions;
+import dev.willram.ramcore.exception.types.EntityRetiredException;
 import dev.willram.ramcore.interfaces.Delegate;
 import dev.willram.ramcore.scheduler.RamExecutors;
 import dev.willram.ramcore.scheduler.Schedulers;
+import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.scheduler.Ticks;
 
 import org.jetbrains.annotations.NotNull;
@@ -188,6 +190,144 @@ final class RamPromise<V> implements Promise<V> {
         } else {
             Schedulers.executeDelayedAsync(runnable, delay, unit);
         }
+    }
+
+    /**
+     * Runs on the given context. Entity-anchored work that is retired before running completes
+     * {@code target} exceptionally instead of vanishing.
+     */
+    private void executeOn(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull RamPromise<?> target) {
+        if (context.globalContext()) {
+            executeSync(runnable);
+            return;
+        }
+        if (context.asyncContext()) {
+            executeAsync(runnable);
+            return;
+        }
+        Schedulers.execute(context, runnable, () -> target.completeExceptionally(retired(context)));
+    }
+
+    private void executeDelayedOn(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull RamPromise<?> target, long delayTicks) {
+        if (delayTicks <= 0) {
+            executeOn(context, runnable, target);
+            return;
+        }
+        Schedulers.executeLater(context, runnable, () -> target.completeExceptionally(retired(context)), delayTicks);
+    }
+
+    private static EntityRetiredException retired(TaskContext context) {
+        return new EntityRetiredException(Objects.requireNonNull(context.entity(), "entity").getUniqueId());
+    }
+
+    @NotNull
+    @Override
+    public Promise<V> supply(@NotNull TaskContext context, @NotNull Supplier<V> supplier) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(supplier, "supplier");
+        markAsSupplied();
+        executeOn(context, new SupplyRunnable(supplier), this);
+        return this;
+    }
+
+    @NotNull
+    @Override
+    public Promise<V> supplyDelayed(@NotNull TaskContext context, @NotNull Supplier<V> supplier, long delayTicks) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(supplier, "supplier");
+        markAsSupplied();
+        executeDelayedOn(context, new SupplyRunnable(supplier), this, delayTicks);
+        return this;
+    }
+
+    @NotNull
+    @Override
+    public Promise<V> supplyExceptionally(@NotNull TaskContext context, @NotNull Callable<V> callable) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(callable, "callable");
+        markAsSupplied();
+        executeOn(context, new ThrowingSupplyRunnable(callable), this);
+        return this;
+    }
+
+    @NotNull
+    @Override
+    public <U> Promise<U> thenApply(@NotNull TaskContext context, @NotNull Function<? super V, ? extends U> fn) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(fn, "fn");
+        RamPromise<U> promise = empty();
+        this.fut.whenComplete((value, t) -> {
+            if (t != null) {
+                promise.completeExceptionally(t);
+            } else {
+                executeOn(context, new ApplyRunnable<>(promise, fn, value), promise);
+            }
+        });
+        return promise;
+    }
+
+    @NotNull
+    @Override
+    public <U> Promise<U> thenApplyDelayed(@NotNull TaskContext context, @NotNull Function<? super V, ? extends U> fn, long delayTicks) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(fn, "fn");
+        RamPromise<U> promise = empty();
+        this.fut.whenComplete((value, t) -> {
+            if (t != null) {
+                promise.completeExceptionally(t);
+            } else {
+                executeDelayedOn(context, new ApplyRunnable<>(promise, fn, value), promise, delayTicks);
+            }
+        });
+        return promise;
+    }
+
+    @NotNull
+    @Override
+    public <U> Promise<U> thenCompose(@NotNull TaskContext context, @NotNull Function<? super V, ? extends Promise<U>> fn) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(fn, "fn");
+        RamPromise<U> promise = empty();
+        this.fut.whenComplete((value, t) -> {
+            if (t != null) {
+                promise.completeExceptionally(t);
+            } else {
+                executeOn(context, new ComposeRunnable<>(promise, fn, value, !context.asyncContext()), promise);
+            }
+        });
+        return promise;
+    }
+
+    @NotNull
+    @Override
+    public Promise<V> exceptionally(@NotNull TaskContext context, @NotNull Function<Throwable, ? extends V> fn) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(fn, "fn");
+        RamPromise<V> promise = empty();
+        this.fut.whenComplete((value, t) -> {
+            if (t == null) {
+                promise.complete(value);
+            } else {
+                executeOn(context, new ExceptionallyRunnable<>(promise, fn, t), promise);
+            }
+        });
+        return promise;
+    }
+
+    @NotNull
+    @Override
+    public Promise<V> exceptionallyDelayed(@NotNull TaskContext context, @NotNull Function<Throwable, ? extends V> fn, long delayTicks) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(fn, "fn");
+        RamPromise<V> promise = empty();
+        this.fut.whenComplete((value, t) -> {
+            if (t == null) {
+                promise.complete(value);
+            } else {
+                executeDelayedOn(context, new ExceptionallyRunnable<>(promise, fn, t), promise, delayTicks);
+            }
+        });
+        return promise;
     }
 
     private boolean complete(V value) {

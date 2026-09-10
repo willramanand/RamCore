@@ -1,16 +1,26 @@
 package dev.willram.ramcore.promise;
 
+import dev.willram.ramcore.exception.types.EntityRetiredException;
+import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.testkit.FakeScheduler;
+import dev.willram.ramcore.testkit.ProxyFakes;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class PromiseTest {
@@ -138,6 +148,77 @@ public final class PromiseTest {
 
         assertTrue(recovered.isDone(), "derived promise must not hang after an upstream cancel");
         assertEquals("fallback", recovered.join());
+    }
+
+    @Test
+    public void entityContinuationRunsOnTheEntityQueue() {
+        UUID id = UUID.randomUUID();
+        Entity entity = ProxyFakes.proxy(Entity.class, Map.of("getUniqueId", id));
+
+        Promise<Integer> promise = Promise.completed(1).thenApply(TaskContext.of(entity), value -> value + 1);
+
+        assertFalse(promise.isDone(), "entity work never runs inline");
+        this.scheduler.tick();
+        assertEquals(2, promise.join());
+        assertEquals(List.of("entity:" + id), this.scheduler.executed());
+    }
+
+    @Test
+    public void entityContinuationFailsWithEntityRetiredWhenEntityIsRemoved() {
+        UUID id = UUID.randomUUID();
+        Entity entity = ProxyFakes.proxy(Entity.class, Map.of("getUniqueId", id));
+
+        Promise<Integer> promise = Promise.completed(1).thenApply(TaskContext.of(entity), value -> value + 1);
+        this.scheduler.retireEntity(id);
+        this.scheduler.tick();
+
+        assertTrue(promise.isDone(), "retired entity work must not hang the chain");
+        CompletionException failure = assertThrows(CompletionException.class, promise::join);
+        assertInstanceOf(EntityRetiredException.class, failure.getCause());
+        assertEquals(id, ((EntityRetiredException) failure.getCause()).entityId());
+    }
+
+    @Test
+    public void regionContinuationRunsOnTheRegionQueue() {
+        Location location = new Location(null, 10, 64, -20);
+
+        Promise<String> promise = Promise.completed("x").thenApply(TaskContext.of(location), value -> value + "!");
+
+        assertFalse(promise.isDone());
+        this.scheduler.tick();
+        assertEquals("x!", promise.join());
+        assertEquals(List.of("region:?@10,64,-20"), this.scheduler.executed());
+    }
+
+    @Test
+    public void supplyingOnAsyncContextQueuesAsync() {
+        Promise<Integer> promise = Promise.supplying(TaskContext.async(), () -> 5);
+
+        assertEquals(1, this.scheduler.pendingAsync());
+        this.scheduler.runAsync();
+        assertEquals(5, promise.join());
+    }
+
+    @Test
+    public void exceptionallyOnContextRecoversAfterDelay() {
+        Promise<String> promise = Promise.<String>exceptionally(new IllegalStateException("boom"))
+                .exceptionallyDelayed(TaskContext.global(), error -> "recovered", 3L);
+
+        this.scheduler.tick(2);
+        assertFalse(promise.isDone());
+        this.scheduler.tick();
+        assertEquals("recovered", promise.join());
+    }
+
+    @Test
+    public void thenComposeDelayedDispatchesByThreadContext() {
+        Promise<Integer> promise = Promise.completed(2)
+                .thenComposeDelayed(ThreadContext.ASYNC, value -> Promise.completed(value * 2), 2L);
+
+        this.scheduler.tick(2);
+        assertFalse(promise.isDone(), "delayed async work lands on the async queue");
+        this.scheduler.runAsync();
+        assertEquals(4, promise.join());
     }
 
     @Test

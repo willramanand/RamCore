@@ -27,6 +27,7 @@ package dev.willram.ramcore.scheduler;
 
 import dev.willram.ramcore.RamPlugin;
 import dev.willram.ramcore.exception.RamExceptions;
+import dev.willram.ramcore.exception.types.EntityRetiredException;
 import dev.willram.ramcore.interfaces.Delegate;
 import dev.willram.ramcore.promise.Promise;
 import dev.willram.ramcore.promise.ThreadContext;
@@ -264,7 +265,7 @@ public final class Schedulers {
         Promise<Void> promise = Promise.empty();
         backend().executeEntity(entity, () -> completePromise(promise, runnable), () -> {
             retired.run();
-            promise.cancel();
+            promise.supplyException(new EntityRetiredException(entity.getUniqueId()));
         });
         return promise;
     }
@@ -402,7 +403,7 @@ public final class Schedulers {
         Promise<Void> promise = Promise.empty();
         backend().runDelayedEntity(entity, () -> completePromise(promise, runnable), () -> {
             retired.run();
-            promise.cancel();
+            promise.supplyException(new EntityRetiredException(entity.getUniqueId()));
         }, delayTicks);
         return promise;
     }
@@ -725,6 +726,53 @@ public final class Schedulers {
         return runLater(world, chunkX, chunkZ, runnable, delayTicks, owner);
     }
 
+    /**
+     * Runs work on the given context without a Promise wrapper.
+     *
+     * <p>For entity contexts, {@code retired} runs instead of {@code runnable} when the entity was
+     * removed before the work could execute. Other contexts never call {@code retired}. Global work
+     * runs inline when already on the global thread; everything else is queued for the owning
+     * scheduler.</p>
+     *
+     * @param context  where to run
+     * @param runnable the work
+     * @param retired  callback for retired entity work
+     */
+    public static void execute(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull Runnable retired) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(retired, "retired");
+        switch (context.type()) {
+            case GLOBAL -> backend().executeSync(runnable);
+            case ASYNC -> backend().executeAsync(runnable);
+            case ENTITY -> backend().executeEntity(Objects.requireNonNull(context.entity(), "entity"), runnable, retired);
+            case REGION -> backend().executeRegion(Objects.requireNonNull(context.location(), "location"), runnable);
+            case CHUNK -> backend().executeRegion(Objects.requireNonNull(context.world(), "world"), context.chunkX(), context.chunkZ(), runnable);
+        }
+    }
+
+    /**
+     * Runs work on the given context after a delay without a Promise wrapper. See
+     * {@link #execute(TaskContext, Runnable, Runnable)} for the retired contract.
+     *
+     * @param context    where to run
+     * @param runnable   the work
+     * @param retired    callback for retired entity work
+     * @param delayTicks the delay in ticks
+     */
+    public static void executeLater(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull Runnable retired, long delayTicks) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(retired, "retired");
+        switch (context.type()) {
+            case GLOBAL -> backend().runDelayedSync(runnable, delayTicks);
+            case ASYNC -> backend().runDelayedAsync(runnable, delayTicks);
+            case ENTITY -> backend().runDelayedEntity(Objects.requireNonNull(context.entity(), "entity"), runnable, retired, delayTicks);
+            case REGION -> backend().runDelayedRegion(Objects.requireNonNull(context.location(), "location"), runnable, delayTicks);
+            case CHUNK -> backend().runDelayedRegion(Objects.requireNonNull(context.world(), "world"), context.chunkX(), context.chunkZ(), runnable, delayTicks);
+        }
+    }
+
     public static boolean isSyncThread() {
         return backend().isSyncThread();
     }
@@ -963,7 +1011,7 @@ public final class Schedulers {
 
         @Override
         protected <T> void schedulePromise(@NotNull Promise<T> promise, @NotNull Callable<T> callable, long delayTicks) {
-            backend().runDelayedEntity(this.entity, () -> completePromise(promise, callable), promise::cancel, delayTicks);
+            backend().runDelayedEntity(this.entity, () -> completePromise(promise, callable), () -> promise.supplyException(new EntityRetiredException(this.entity.getUniqueId())), delayTicks);
         }
 
         @NotNull
