@@ -9,7 +9,7 @@ import dev.willram.ramcore.reflect.NmsVersion;
 import io.papermc.paper.datacomponent.DataComponentType;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -17,9 +17,9 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class ItemNbtSerializationTest {
 

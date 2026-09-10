@@ -67,4 +67,6 @@ Not allowed in public APIs:
 
 - Raw NMS handles as return types or required parameters.
 - Direct Bukkit global scheduler use for live world/entity mutations.
+- Parking the global tick thread from another thread (`ServerThreadLock` is deprecated and refuses to run on Folia).
+- `Promise` continuations that touch an entity or block using the `Sync` variants; use the `TaskContext` overloads so the step runs on the owner.
 - Optional plugin classes in core method signatures unless the package is explicitly an integration boundary.

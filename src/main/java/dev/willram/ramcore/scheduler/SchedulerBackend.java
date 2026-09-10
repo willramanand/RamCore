@@ -5,12 +5,20 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import java.util.concurrent.TimeUnit;
 
-interface SchedulerBackend {
+/**
+ * Dispatch surface behind {@link Schedulers}. Internal: implemented by the Paper/Folia backend and by
+ * the test kit's deterministic scheduler.
+ */
+@ApiStatus.Internal
+public interface SchedulerBackend {
 
     boolean isSyncThread();
+
+    boolean isSyncThread(@NotNull Thread thread);
 
     void executeSync(@NotNull Runnable runnable);
 

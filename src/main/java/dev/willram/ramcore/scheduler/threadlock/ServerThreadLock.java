@@ -1,55 +1,30 @@
-/*
- * This file is part of helper, licensed under the MIT License.
- *
- *  Copyright (c) lucko (Luck) <luck@lucko.me>
- *  Copyright (c) contributors
- *
- *  Permission is hereby granted, free of charge, to any person obtaining a copy
- *  of this software and associated documentation files (the "Software"), to deal
- *  in the Software without restriction, including without limitation the rights
- *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- *  copies of the Software, and to permit persons to whom the Software is
- *  furnished to do so, subject to the following conditions:
- *
- *  The above copyright notice and this permission notice shall be included in all
- *  copies or substantial portions of the Software.
- *
- *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.
- */
-
 package dev.willram.ramcore.scheduler.threadlock;
 
 import dev.willram.ramcore.terminable.Terminable;
 
 /**
- * A tool to synchronize code with the main server thread
+ * Blocks the caller until the server thread is parked, runs the caller's code while the server
+ * thread waits, and releases it on {@link #close()}.
  *
- * <p>It is highly recommended to use this interface with try-with-resource blocks.</p>
- *
- * @see dev.willram.devcore.promise.ThreadContext#SYNC
+ * @deprecated Parking the global tick thread from another thread is unsafe on Folia, where there is
+ * no single server thread that owns world state, and it stalls every region on Paper. Schedule the
+ * work instead: {@code Schedulers.call(TaskContext.of(entity), callable).join()} from an async
+ * thread, or {@code Promise.thenApply(TaskContext, fn)} to continue on the owning thread. Obtaining
+ * a lock on a regionised (Folia) server throws {@code ApiMisuseException}.
  */
+@Deprecated(since = "2.1")
 public interface ServerThreadLock extends Terminable {
 
     /**
-     * Blocks the current thread until a {@link ServerThreadLock} can be obtained.
+     * Obtains a lock on the server thread. Returns immediately when already on it.
      *
-     * <p>Will attempt to return immediately if the calling thread is the main thread itself.</p>
-     *
-     * @return a lock
+     * @return the lock; close it to release the server thread
+     * @throws dev.willram.ramcore.exception.ApiMisuseException on a regionised (Folia) server
      */
     static ServerThreadLock obtain() {
         return new ServerThreadLockImpl();
     }
 
-    /**
-     * Closes the lock, and allows the main thread to continue
-     */
     @Override
     void close();
 

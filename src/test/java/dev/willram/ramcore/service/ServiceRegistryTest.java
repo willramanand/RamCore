@@ -1,15 +1,15 @@
 package dev.willram.ramcore.service;
 
-import dev.willram.ramcore.terminable.composite.CompositeTerminable;
+import dev.willram.ramcore.testkit.TestServiceContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class ServiceRegistryTest {
 
@@ -22,13 +22,13 @@ public final class ServiceRegistryTest {
 
     @Test
     public void lifecycleFollowsDependencyOrder() {
-        TestContext context = new TestContext();
+        TestServiceContext context = new TestServiceContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
-        context.registry = registry;
+        context.attach(registry);
 
-        registry.register(COMMANDS, new RecordingService("commands", context.events)).dependsOn(MESSAGES);
-        registry.register(MESSAGES, new RecordingService("messages", context.events)).dependsOn(CONFIG);
-        registry.register(CONFIG, new RecordingService("config", context.events));
+        registry.register(COMMANDS, new RecordingService("commands", context.events())).dependsOn(MESSAGES);
+        registry.register(MESSAGES, new RecordingService("messages", context.events())).dependsOn(CONFIG);
+        registry.register(CONFIG, new RecordingService("config", context.events()));
 
         registry.loadAll();
         registry.enableAll();
@@ -44,15 +44,15 @@ public final class ServiceRegistryTest {
                 "commands:disable",
                 "messages:disable",
                 "config:disable"
-        ), context.events);
+        ), context.events());
     }
 
     @Test
     public void lookupUsesTypedKey() {
-        TestContext context = new TestContext();
+        TestServiceContext context = new TestServiceContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
-        context.registry = registry;
-        RecordingService config = new RecordingService("config", context.events);
+        context.attach(registry);
+        RecordingService config = new RecordingService("config", context.events());
 
         registry.register(CONFIG, config);
 
@@ -61,46 +61,29 @@ public final class ServiceRegistryTest {
         assertSame(config, registry.get(CONFIG).orElseThrow());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void missingDependencyFailsFast() {
-        TestContext context = new TestContext();
+        TestServiceContext context = new TestServiceContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
-        context.registry = registry;
+        context.attach(registry);
 
-        registry.register(COMMANDS, new RecordingService("commands", context.events)).dependsOn(MESSAGES);
+        registry.register(COMMANDS, new RecordingService("commands", context.events())).dependsOn(MESSAGES);
 
-        registry.loadAll();
+        assertThrows(IllegalStateException.class, registry::loadAll);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void cyclicDependencyFailsFast() {
-        TestContext context = new TestContext();
+        TestServiceContext context = new TestServiceContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
-        context.registry = registry;
+        context.attach(registry);
 
-        registry.register(CONFIG, new RecordingService("config", context.events)).dependsOn(COMMANDS);
-        registry.register(COMMANDS, new RecordingService("commands", context.events)).dependsOn(CONFIG);
+        registry.register(CONFIG, new RecordingService("config", context.events())).dependsOn(COMMANDS);
+        registry.register(COMMANDS, new RecordingService("commands", context.events())).dependsOn(CONFIG);
 
-        registry.loadAll();
+        assertThrows(IllegalStateException.class, registry::loadAll);
     }
 
-    private static final class TestContext implements ServiceContext {
-        private final List<String> events = new ArrayList<>();
-        private final CompositeTerminable terminables = CompositeTerminable.create();
-        private ServiceRegistry registry;
-
-        @NotNull
-        @Override
-        public ServiceRegistry services() {
-            return this.registry;
-        }
-
-        @NotNull
-        @Override
-        public <T extends AutoCloseable> T bind(@NotNull T terminable) {
-            return this.terminables.bind(terminable);
-        }
-    }
 
     private record RecordingService(String name, List<String> events) implements Service {
         @Override

@@ -25,6 +25,8 @@
 
 package dev.willram.ramcore.scheduler.threadlock;
 
+import dev.willram.ramcore.diagnostics.SchedulerDiagnostics;
+import dev.willram.ramcore.exception.RamPreconditions;
 import dev.willram.ramcore.promise.ThreadContext;
 import dev.willram.ramcore.scheduler.Schedulers;
 
@@ -44,6 +46,10 @@ final class ServerThreadLockImpl implements ServerThreadLock {
             this.obtainedSignal.countDown();
             return;
         }
+
+        RamPreconditions.checkState(!SchedulerDiagnostics.capture().foliaDetected(),
+                "ServerThreadLock cannot park the global tick thread on a regionised (Folia) server",
+                "Schedule the work on its owner instead: Schedulers.call(TaskContext.of(entity), callable).join() from async, or Promise.thenApply(TaskContext, fn).");
 
         // synchronize with the main thread, then countdown
         Schedulers.sync().execute(this::signal);

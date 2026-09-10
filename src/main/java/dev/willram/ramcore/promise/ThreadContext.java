@@ -26,7 +26,7 @@
 package dev.willram.ramcore.promise;
 
 
-import dev.willram.ramcore.utils.LoaderUtils;
+
 import dev.willram.ramcore.scheduler.Schedulers;
 
 /**
@@ -49,7 +49,7 @@ public enum ThreadContext {
     }
 
     public static ThreadContext forThread(Thread thread) {
-        return thread == LoaderUtils.getMainThread() ? SYNC : ASYNC;
+        return Schedulers.isSyncThread(thread) ? SYNC : ASYNC;
     }
 
 }

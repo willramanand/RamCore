@@ -27,6 +27,7 @@ package dev.willram.ramcore.scheduler;
 
 import dev.willram.ramcore.RamPlugin;
 import dev.willram.ramcore.exception.RamExceptions;
+import dev.willram.ramcore.exception.types.EntityRetiredException;
 import dev.willram.ramcore.interfaces.Delegate;
 import dev.willram.ramcore.promise.Promise;
 import dev.willram.ramcore.promise.ThreadContext;
@@ -56,7 +57,6 @@ import java.util.function.Supplier;
  * Provides common instances of {@link Scheduler}.
  */
 public final class Schedulers {
-    private static final SchedulerBackend BACKEND = new PaperFoliaSchedulerBackend();
     private static final Scheduler SYNC_SCHEDULER = new SyncScheduler();
     private static final Scheduler ASYNC_SCHEDULER = new AsyncScheduler();
 
@@ -263,9 +263,9 @@ public final class Schedulers {
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(retired, "retired");
         Promise<Void> promise = Promise.empty();
-        BACKEND.executeEntity(entity, () -> completePromise(promise, runnable), () -> {
+        backend().executeEntity(entity, () -> completePromise(promise, runnable), () -> {
             retired.run();
-            promise.cancel();
+            promise.supplyException(new EntityRetiredException(entity.getUniqueId()));
         });
         return promise;
     }
@@ -401,9 +401,9 @@ public final class Schedulers {
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(retired, "retired");
         Promise<Void> promise = Promise.empty();
-        BACKEND.runDelayedEntity(entity, () -> completePromise(promise, runnable), () -> {
+        backend().runDelayedEntity(entity, () -> completePromise(promise, runnable), () -> {
             retired.run();
-            promise.cancel();
+            promise.supplyException(new EntityRetiredException(entity.getUniqueId()));
         }, delayTicks);
         return promise;
     }
@@ -499,7 +499,7 @@ public final class Schedulers {
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(retired, "retired");
         RamTask task = new RamTask(ignored -> runnable.run());
-        task.setHandle(BACKEND.runRepeatingEntity(entity, task, () -> {
+        task.setHandle(backend().runRepeatingEntity(entity, task, () -> {
             task.stop();
             retired.run();
         }, delayTicks, intervalTicks));
@@ -726,24 +726,87 @@ public final class Schedulers {
         return runLater(world, chunkX, chunkZ, runnable, delayTicks, owner);
     }
 
+    /**
+     * Runs work on the given context without a Promise wrapper.
+     *
+     * <p>For entity contexts, {@code retired} runs instead of {@code runnable} when the entity was
+     * removed before the work could execute. Other contexts never call {@code retired}. Global work
+     * runs inline when already on the global thread; everything else is queued for the owning
+     * scheduler.</p>
+     *
+     * @param context  where to run
+     * @param runnable the work
+     * @param retired  callback for retired entity work
+     */
+    public static void execute(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull Runnable retired) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(retired, "retired");
+        switch (context.type()) {
+            case GLOBAL -> backend().executeSync(runnable);
+            case ASYNC -> backend().executeAsync(runnable);
+            case ENTITY -> backend().executeEntity(Objects.requireNonNull(context.entity(), "entity"), runnable, retired);
+            case REGION -> backend().executeRegion(Objects.requireNonNull(context.location(), "location"), runnable);
+            case CHUNK -> backend().executeRegion(Objects.requireNonNull(context.world(), "world"), context.chunkX(), context.chunkZ(), runnable);
+        }
+    }
+
+    /**
+     * Runs work on the given context after a delay without a Promise wrapper. See
+     * {@link #execute(TaskContext, Runnable, Runnable)} for the retired contract.
+     *
+     * @param context    where to run
+     * @param runnable   the work
+     * @param retired    callback for retired entity work
+     * @param delayTicks the delay in ticks
+     */
+    public static void executeLater(@NotNull TaskContext context, @NotNull Runnable runnable, @NotNull Runnable retired, long delayTicks) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(retired, "retired");
+        switch (context.type()) {
+            case GLOBAL -> backend().runDelayedSync(runnable, delayTicks);
+            case ASYNC -> backend().runDelayedAsync(runnable, delayTicks);
+            case ENTITY -> backend().runDelayedEntity(Objects.requireNonNull(context.entity(), "entity"), runnable, retired, delayTicks);
+            case REGION -> backend().runDelayedRegion(Objects.requireNonNull(context.location(), "location"), runnable, delayTicks);
+            case CHUNK -> backend().runDelayedRegion(Objects.requireNonNull(context.world(), "world"), context.chunkX(), context.chunkZ(), runnable, delayTicks);
+        }
+    }
+
     public static boolean isSyncThread() {
-        return BACKEND.isSyncThread();
+        return backend().isSyncThread();
+    }
+
+    /**
+     * Checks whether the given thread is the server (global tick) thread.
+     *
+     * @param thread the thread to test
+     * @return true if the thread is the sync thread
+     */
+    public static boolean isSyncThread(@NotNull Thread thread) {
+        Objects.requireNonNull(thread, "thread");
+        return backend().isSyncThread(thread);
+    }
+
+    @NotNull
+    private static SchedulerBackend backend() {
+        return SchedulerBackends.current();
     }
 
     public static void shutdown(@NotNull RamPlugin plugin) {
-        BACKEND.cancelTasks(plugin);
+        backend().cancelTasks(plugin);
     }
 
     public static void executeDelayedSync(@NotNull Runnable runnable, long delayTicks) {
-        BACKEND.runDelayedSync(runnable, delayTicks);
+        backend().runDelayedSync(runnable, delayTicks);
     }
 
     public static void executeDelayedAsync(@NotNull Runnable runnable, long delayTicks) {
-        BACKEND.runDelayedAsync(runnable, delayTicks);
+        backend().runDelayedAsync(runnable, delayTicks);
     }
 
     public static void executeDelayedAsync(@NotNull Runnable runnable, long delay, @NotNull TimeUnit unit) {
-        BACKEND.runDelayedAsync(runnable, delay, unit);
+        backend().runDelayedAsync(runnable, delay, unit);
     }
 
     @NotNull
@@ -788,7 +851,7 @@ public final class Schedulers {
 
         @Override
         public void execute(Runnable runnable) {
-            BACKEND.executeSync(runnable);
+            backend().executeSync(runnable);
         }
 
         @NotNull
@@ -802,7 +865,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delayTicks, long intervalTicks) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingSync(task, delayTicks, intervalTicks));
+            task.setHandle(backend().runRepeatingSync(task, delayTicks, intervalTicks));
             return task;
         }
 
@@ -817,7 +880,7 @@ public final class Schedulers {
 
         @Override
         public void execute(Runnable runnable) {
-            BACKEND.executeAsync(runnable);
+            backend().executeAsync(runnable);
         }
 
         @NotNull
@@ -831,7 +894,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delayTicks, long intervalTicks) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingAsync(task, delayTicks, intervalTicks));
+            task.setHandle(backend().runRepeatingAsync(task, delayTicks, intervalTicks));
             return task;
         }
 
@@ -840,7 +903,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delay, @NotNull TimeUnit delayUnit, long interval, @NotNull TimeUnit intervalUnit) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingAsync(task, delay, delayUnit, interval, intervalUnit));
+            task.setHandle(backend().runRepeatingAsync(task, delay, delayUnit, interval, intervalUnit));
             return task;
         }
     }
@@ -943,12 +1006,12 @@ public final class Schedulers {
 
         @Override
         public void execute(Runnable runnable) {
-            BACKEND.executeEntity(this.entity, runnable, () -> {});
+            backend().executeEntity(this.entity, runnable, () -> {});
         }
 
         @Override
         protected <T> void schedulePromise(@NotNull Promise<T> promise, @NotNull Callable<T> callable, long delayTicks) {
-            BACKEND.runDelayedEntity(this.entity, () -> completePromise(promise, callable), promise::cancel, delayTicks);
+            backend().runDelayedEntity(this.entity, () -> completePromise(promise, callable), () -> promise.supplyException(new EntityRetiredException(this.entity.getUniqueId())), delayTicks);
         }
 
         @NotNull
@@ -956,7 +1019,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delayTicks, long intervalTicks) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingEntity(this.entity, task, task::stop, delayTicks, intervalTicks));
+            task.setHandle(backend().runRepeatingEntity(this.entity, task, task::stop, delayTicks, intervalTicks));
             return task;
         }
 
@@ -971,12 +1034,12 @@ public final class Schedulers {
 
         @Override
         public void execute(Runnable runnable) {
-            BACKEND.executeRegion(this.location, runnable);
+            backend().executeRegion(this.location, runnable);
         }
 
         @Override
         protected <T> void schedulePromise(@NotNull Promise<T> promise, @NotNull Callable<T> callable, long delayTicks) {
-            BACKEND.runDelayedRegion(this.location, () -> completePromise(promise, callable), delayTicks);
+            backend().runDelayedRegion(this.location, () -> completePromise(promise, callable), delayTicks);
         }
 
         @NotNull
@@ -984,7 +1047,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delayTicks, long intervalTicks) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingRegion(this.location, task, delayTicks, intervalTicks));
+            task.setHandle(backend().runRepeatingRegion(this.location, task, delayTicks, intervalTicks));
             return task;
         }
 
@@ -1003,12 +1066,12 @@ public final class Schedulers {
 
         @Override
         public void execute(Runnable runnable) {
-            BACKEND.executeRegion(this.world, this.chunkX, this.chunkZ, runnable);
+            backend().executeRegion(this.world, this.chunkX, this.chunkZ, runnable);
         }
 
         @Override
         protected <T> void schedulePromise(@NotNull Promise<T> promise, @NotNull Callable<T> callable, long delayTicks) {
-            BACKEND.runDelayedRegion(this.world, this.chunkX, this.chunkZ, () -> completePromise(promise, callable), delayTicks);
+            backend().runDelayedRegion(this.world, this.chunkX, this.chunkZ, () -> completePromise(promise, callable), delayTicks);
         }
 
         @NotNull
@@ -1016,7 +1079,7 @@ public final class Schedulers {
         public Task runRepeating(@NotNull Consumer<Task> consumer, long delayTicks, long intervalTicks) {
             Objects.requireNonNull(consumer, "consumer");
             RamTask task = new RamTask(consumer);
-            task.setHandle(BACKEND.runRepeatingRegion(this.world, this.chunkX, this.chunkZ, task, delayTicks, intervalTicks));
+            task.setHandle(backend().runRepeatingRegion(this.world, this.chunkX, this.chunkZ, task, delayTicks, intervalTicks));
             return task;
         }
 

@@ -1,18 +1,19 @@
 package dev.willram.ramcore.menu;
 
+import dev.willram.ramcore.testkit.FakeItemStack;
 import dev.willram.ramcore.exception.ApiMisuseException;
 import net.kyori.adventure.text.Component;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class MenuFrameworkTest {
 
@@ -100,14 +101,4 @@ public final class MenuFrameworkTest {
         return new FakeItemStack();
     }
 
-    private static final class FakeItemStack extends ItemStack {
-        private FakeItemStack() {
-            super();
-        }
-
-        @Override
-        public ItemStack clone() {
-            return new FakeItemStack();
-        }
-    }
 }

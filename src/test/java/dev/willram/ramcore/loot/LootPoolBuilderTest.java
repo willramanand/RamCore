@@ -7,12 +7,12 @@ import dev.willram.ramcore.nms.api.NmsSupportStatus;
 import dev.willram.ramcore.random.VariableAmount;
 import dev.willram.ramcore.reflect.MinecraftVersion;
 import dev.willram.ramcore.reflect.NmsVersion;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class LootPoolBuilderTest {
 

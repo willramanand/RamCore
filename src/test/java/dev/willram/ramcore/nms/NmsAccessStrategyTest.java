@@ -28,16 +28,16 @@ import dev.willram.ramcore.path.Pathfinders;
 import dev.willram.ramcore.reflect.MinecraftVersion;
 import dev.willram.ramcore.reflect.NmsVersion;
 import dev.willram.ramcore.world.WorldBlocks;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public final class NmsAccessStrategyTest {
 

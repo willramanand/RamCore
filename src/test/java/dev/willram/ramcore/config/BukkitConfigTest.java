@@ -1,14 +1,13 @@
 package dev.willram.ramcore.config;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class BukkitConfigTest {
     private static final ConfigKey<String> PREFIX =
@@ -19,12 +18,12 @@ public final class BukkitConfigTest {
     private static final ConfigKey<String> DATABASE_URL =
             ConfigKey.required("database.url", String.class);
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    Path tempDir;
 
     @Test
     public void loadWritesDefaults() throws Exception {
-        Path path = this.temporaryFolder.newFolder().toPath().resolve("config.yml");
+        Path path = this.tempDir.resolve("config.yml");
 
         BukkitConfig config = BukkitConfig.load(path, PREFIX, RETRIES);
 
@@ -37,7 +36,7 @@ public final class BukkitConfigTest {
 
     @Test
     public void reloadReadsUpdatedValues() throws Exception {
-        Path path = this.temporaryFolder.newFile("config.yml").toPath();
+        Path path = this.tempDir.resolve("config.yml");
         Files.writeString(path, """
                 messages:
                   prefix: <green>[Test]</green>
@@ -61,7 +60,7 @@ public final class BukkitConfigTest {
 
     @Test
     public void validationReportsInvalidValues() throws Exception {
-        Path path = this.temporaryFolder.newFile("config.yml").toPath();
+        Path path = this.tempDir.resolve("config.yml");
         Files.writeString(path, """
                 startup:
                   retries: -1

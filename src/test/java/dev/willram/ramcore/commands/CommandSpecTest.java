@@ -5,9 +5,10 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SuppressWarnings("UnstableApiUsage")
 public final class CommandSpecTest {
@@ -30,25 +31,25 @@ public final class CommandSpecTest {
         CommandNode<CommandSourceStack> child = root.getChild("child");
         CommandNode<CommandSourceStack> raw = root.getChild("raw");
 
-        assertNotNull("help literal should be attached after configuration", help);
-        assertNotNull("help literal should be executable", help.getCommand());
-        assertNotNull("child literal should be attached after configuration", child);
-        assertNotNull("incomplete child literal should have a missing argument fallback", child.getCommand());
-        assertNotNull("raw Brigadier literal should be attached", raw);
-        assertNotNull("raw Brigadier literal should be executable", raw.getCommand());
+        assertNotNull(help, "help literal should be attached after configuration");
+        assertNotNull(help.getCommand(), "help literal should be executable");
+        assertNotNull(child, "child literal should be attached after configuration");
+        assertNotNull(child.getCommand(), "incomplete child literal should have a missing argument fallback");
+        assertNotNull(raw, "raw Brigadier literal should be attached");
+        assertNotNull(raw.getCommand(), "raw Brigadier literal should be executable");
 
         CommandNode<CommandSourceStack> amountArgument = child.getChild("amount");
-        assertNotNull("nested argument should be attached after configuration", amountArgument);
-        assertNotNull("nested argument should be executable", amountArgument.getCommand());
+        assertNotNull(amountArgument, "nested argument should be attached after configuration");
+        assertNotNull(amountArgument.getCommand(), "nested argument should be executable");
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void builtNodesRejectLateMutation() {
         CommandSpec spec = RamCommands.command("root");
         CommandSpec.Node child = spec.literal("child");
 
         spec.build();
 
-        child.literal("late");
+        assertThrows(IllegalStateException.class, () -> child.literal("late"));
     }
 }

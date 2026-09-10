@@ -31,6 +31,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -69,6 +70,26 @@ public final class LoaderUtils {
      */
     public static synchronized void forceSetPlugin(RamPlugin plugin) {
         LoaderUtils.plugin = plugin;
+    }
+
+    /**
+     * Gets the bound RamCore plugin if one can be resolved without failing.
+     *
+     * <p>Unlike {@link #getPlugin()}, this never throws. Off-server (unit tests) it returns
+     * {@link Optional#empty()} so callers can fall back to plain JDK facilities.</p>
+     *
+     * @return the bound plugin, or empty when RamCore is not running inside a server
+     */
+    @NotNull
+    public static synchronized Optional<RamPlugin> pluginIfBound() {
+        if (plugin != null) {
+            return Optional.of(plugin);
+        }
+        try {
+            return Optional.of(getPlugin());
+        } catch (RuntimeException | LinkageError e) {
+            return Optional.empty();
+        }
     }
 
 

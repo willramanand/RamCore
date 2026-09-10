@@ -5,8 +5,6 @@ import dev.willram.ramcore.event.Events;
 import dev.willram.ramcore.metadata.Metadata;
 import dev.willram.ramcore.metadata.MetadataKey;
 import dev.willram.ramcore.metadata.MetadataMap;
-import dev.willram.ramcore.reflect.MinecraftVersion;
-import dev.willram.ramcore.reflect.MinecraftVersions;
 import dev.willram.ramcore.scheduler.Schedulers;
 import dev.willram.ramcore.terminable.TerminableConsumer;
 import dev.willram.ramcore.terminable.composite.CompositeTerminable;
@@ -126,17 +124,13 @@ public abstract class Gui implements TerminableConsumer {
     }
 
     public void open() {
-        if (MinecraftVersion.getRuntimeVersion().isAfterOrEq(MinecraftVersions.v1_16)) {
-            // delay by a tick in 1.16+ to prevent an unwanted PlayerInteractEvent interfering with inventory clicks
-            Schedulers.runLater(this.player, () -> {
-                if (!this.player.isOnline()) {
-                    return;
-                }
-                handleOpen();
-            }, 1);
-        } else {
+        // delay by a tick to prevent an unwanted PlayerInteractEvent interfering with inventory clicks
+        Schedulers.runLater(this.player, () -> {
+            if (!this.player.isOnline()) {
+                return;
+            }
             handleOpen();
-        }
+        }, 1);
     }
 
     private void handleOpen() {

@@ -1,5 +1,6 @@
 package dev.willram.ramcore.diagnostics;
 
+import dev.willram.ramcore.testkit.TestServiceContext;
 import dev.willram.ramcore.commands.CommandSpec;
 import dev.willram.ramcore.commands.RamCommands;
 import dev.willram.ramcore.service.Service;
@@ -7,15 +8,14 @@ import dev.willram.ramcore.service.ServiceContext;
 import dev.willram.ramcore.service.ServiceDiagnostic;
 import dev.willram.ramcore.service.ServiceKey;
 import dev.willram.ramcore.service.ServiceRegistry;
-import dev.willram.ramcore.terminable.composite.CompositeTerminable;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class PluginDiagnosticsTest {
     private static final ServiceKey<ExampleService> CONFIG = ServiceKey.of("config", ExampleService.class);
@@ -23,9 +23,9 @@ public final class PluginDiagnosticsTest {
 
     @Test
     public void serviceDiagnosticsExposeStateAndDependencies() {
-        TestContext context = new TestContext();
+        TestServiceContext context = new TestServiceContext();
         ServiceRegistry registry = ServiceRegistry.create(context);
-        context.registry = registry;
+        context.attach(registry);
 
         registry.register(MESSAGES, new ExampleService()).dependsOn(CONFIG);
         registry.register(CONFIG, new ExampleService());
@@ -123,20 +123,6 @@ public final class PluginDiagnosticsTest {
         };
     }
 
-    private static final class TestContext implements ServiceContext {
-        private final CompositeTerminable terminables = CompositeTerminable.create();
-        private ServiceRegistry registry;
-
-        @Override
-        public @NotNull ServiceRegistry services() {
-            return this.registry;
-        }
-
-        @Override
-        public @NotNull <T extends AutoCloseable> T bind(@NotNull T terminable) {
-            return this.terminables.bind(terminable);
-        }
-    }
 
     private static final class ExampleService implements Service {
     }
