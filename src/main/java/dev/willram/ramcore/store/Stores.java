@@ -1,6 +1,10 @@
 package dev.willram.ramcore.store;
 
 import dev.willram.ramcore.data.DataKeyCodec;
+import dev.willram.ramcore.store.sql.ConnectionProvider;
+import dev.willram.ramcore.store.sql.SqlDialect;
+import dev.willram.ramcore.store.sql.SqlStore;
+import dev.willram.ramcore.store.sql.SqlStoreConfig;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
@@ -105,6 +109,61 @@ public final class Stores {
     @NotNull
     public static <V> FileStore<String, V> jsonByString(@NotNull Path directory, @NotNull Class<V> type) {
         return file(directory, DataKeyCodec.stringKeys(), StoreCodec.gson(type));
+    }
+
+    /**
+     * A pooled SQL store (HikariCP) for the given connection settings. HikariCP and the JDBC driver
+     * must be on the classpath (resolved by the plugin loader when {@code storage.sql} is enabled).
+     *
+     * @param config   connection settings
+     * @param table    table name
+     * @param keyCodec key to string mapping
+     * @param codec    value serialiser
+     * @param <K>      key type
+     * @param <V>      value type
+     * @return the store
+     * @throws dev.willram.ramcore.exception.ApiMisuseException when HikariCP is unavailable
+     */
+    @NotNull
+    public static <K, V> SqlStore<K, V> sql(@NotNull SqlStoreConfig config, @NotNull String table, @NotNull DataKeyCodec<K> keyCodec, @NotNull StoreCodec<V> codec) {
+        return sql(config, table, keyCodec, codec, StoreMigrations.none());
+    }
+
+    /**
+     * A pooled SQL store (HikariCP) applying migrations on load.
+     *
+     * @param config     connection settings
+     * @param table      table name
+     * @param keyCodec   key to string mapping
+     * @param codec      value serialiser
+     * @param migrations the migration chain
+     * @param <K>        key type
+     * @param <V>        value type
+     * @return the store
+     */
+    @NotNull
+    public static <K, V> SqlStore<K, V> sql(@NotNull SqlStoreConfig config, @NotNull String table, @NotNull DataKeyCodec<K> keyCodec, @NotNull StoreCodec<V> codec, @NotNull StoreMigrations<V> migrations) {
+        Objects.requireNonNull(config, "config");
+        return new SqlStore<>(ConnectionProvider.hikari(config), config.dialect(), table, keyCodec, codec, migrations);
+    }
+
+    /**
+     * A SQL store over a caller-supplied connection provider (unpooled {@code driverManager}, a
+     * custom pool, or a shared one).
+     *
+     * @param connections connection source; closed with the store
+     * @param dialect     SQL dialect
+     * @param table       table name
+     * @param keyCodec    key to string mapping
+     * @param codec       value serialiser
+     * @param migrations  the migration chain
+     * @param <K>         key type
+     * @param <V>         value type
+     * @return the store
+     */
+    @NotNull
+    public static <K, V> SqlStore<K, V> sql(@NotNull ConnectionProvider connections, @NotNull SqlDialect dialect, @NotNull String table, @NotNull DataKeyCodec<K> keyCodec, @NotNull StoreCodec<V> codec, @NotNull StoreMigrations<V> migrations) {
+        return new SqlStore<>(connections, dialect, table, keyCodec, codec, migrations);
     }
 
     /**
