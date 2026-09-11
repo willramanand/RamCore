@@ -33,6 +33,8 @@ dependencies {
     }
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("com.zaxxer:HikariCP:6.3.0")
+    compileOnly("io.lettuce:lettuce-core:6.3.2.RELEASE") // runtime-resolved (ADR-0003)
+    implementation("org.bstats:bstats-bukkit:3.0.2")     // shaded + relocated
 
     testImplementation(project(":ramcore-test"))
     testImplementation(project(":ramcore-nms"))
