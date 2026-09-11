@@ -27,12 +27,13 @@ public final class MenuDialoguePresenter implements DialoguePresenter {
     public void present(@NotNull DialogueSession session, @NotNull DialogueNode node,
                         @NotNull List<DialogueChoice> choices) {
         int rows = Math.max(1, Math.min(6, (choices.size() + 8) / 9));
+        int generation = session.generation();
         MenuView.Builder builder = Menus.menu(this.title, rows);
         for (int i = 0; i < choices.size() && i < rows * 9; i++) {
             int index = i;
             ItemStack icon = ItemStackBuilder.of(Material.PAPER).name(choices.get(i).label()).build();
             builder.button(i, Menus.button(icon)
-                    .on(ClickType.LEFT, context -> session.choose(index))
+                    .on(ClickType.LEFT, context -> session.chooseIfCurrent(index, generation))
                     .closeAfterClick(true)
                     .build());
         }

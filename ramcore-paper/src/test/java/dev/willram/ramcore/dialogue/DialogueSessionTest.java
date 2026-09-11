@@ -91,4 +91,23 @@ public final class DialogueSessionTest {
         assertThrows(RuntimeException.class, () -> session.choose(5));
         assertFalse(session.ended());
     }
+
+    @Test
+    public void staleClickIsIgnoredNotThrown() {
+        Dialogue dialogue = Dialogue.builder(D)
+                .node(DialogueNode.builder("root", "pick")
+                        .choice(DialogueChoice.of("accept", "accept"))
+                        .choice(DialogueChoice.of("leave", null))
+                        .build())
+                .node(DialogueNode.builder("accept", "done").build())
+                .build();
+        DialogueSession session = DialogueSession.create(player(), dialogue, DialogueContext.of(player()), new Recorder());
+        session.start();
+
+        int generation = session.generation();
+        assertTrue(session.chooseIfCurrent(0, generation)); // accept -> terminal, ends
+        assertTrue(session.ended());
+        // stale "leave" click from the same (now superseded) message: ignored, no exception
+        assertFalse(session.chooseIfCurrent(1, generation));
+    }
 }

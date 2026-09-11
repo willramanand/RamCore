@@ -24,6 +24,7 @@ public final class DialogueSession {
 
     private DialogueNode current;
     private boolean ended;
+    private int generation;
 
     private DialogueSession(@NotNull Player player, @NotNull Dialogue dialogue, @NotNull DialogueContext context,
                             @NotNull DialoguePresenter presenter) {
@@ -100,8 +101,36 @@ public final class DialogueSession {
         enter(this.dialogue.node(choice.nextNodeId()).orElseThrow());
     }
 
+    /**
+     * Selects a choice only if the session is still showing the presentation it came from. Stale
+     * clicks (an old chat line, a re-click after the dialogue advanced or ended) are ignored rather
+     * than throwing — chat click callbacks run inside the server's packet handler.
+     *
+     * @param index      the choice index
+     * @param generation the {@link #generation()} captured when the choice was presented
+     * @return {@code true} if the choice was taken
+     */
+    public boolean chooseIfCurrent(int index, int generation) {
+        if (this.ended || generation != this.generation) {
+            return false;
+        }
+        choose(index);
+        return true;
+    }
+
+    /**
+     * A token identifying the current presentation; it changes every time a node is entered. Capture
+     * it when presenting and pass it to {@link #chooseIfCurrent(int, int)} so stale clicks are dropped.
+     *
+     * @return the current presentation generation
+     */
+    public int generation() {
+        return this.generation;
+    }
+
     private void enter(@NotNull DialogueNode node) {
         this.current = node;
+        this.generation++;
         for (DialogueAction action : node.actions()) {
             action.run(this.context);
         }
