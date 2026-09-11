@@ -1926,6 +1926,40 @@ Domain stores wire the same contract into gameplay state. Each defaults to in-me
 
 Testing: `StoreContractTest` in `src/test` runs the same cases against every backend; `FakeScheduler.runAll()` drives async backends.
 
+## Player Data
+
+Package: `dev.willram.ramcore.playerdata`
+
+Stability: **experimental** (stable once an example consumer has used it). Folia: safe by design. Loads run on the async scheduler, values are read and written on the player's thread, and every save copies the value on the player's scheduler before the async write.
+
+`PlayerDataService` loads per-player values before the player joins, hands them out synchronously while the player is online, and writes them back on quit, on an autosave timer, and at shutdown. Each value has a `PlayerDataKey<T>(id, type, defaultFactory, snapshot)` and is persisted through any `Store<UUID, T>` from the Stores section.
+
+```java
+static final PlayerDataKey<Profile> PROFILE = PlayerDataKey.of("profile", Profile.class, Profile::new, Profile::copy);
+
+@Override
+public void load() {                                   // install from load(): the service registry closes after it
+    PlayerDataService data = PlayerDataService.install(this, PlayerDataOptions.defaults());
+    data.register(PROFILE, Stores.cached(Stores.jsonByUuid(getDataFolder().toPath().resolve("profiles"), Profile.class)));
+}
+
+// on the player's thread, after join
+PlayerDataService data = services().require(PlayerDataService.KEY);
+Profile profile = data.require(player, PROFILE);
+profile.level++;
+data.markDirty(player, PROFILE);                       // or data.set(player, PROFILE, newProfile) for immutable values
+```
+
+Lifecycle, driven by `PlayerDataListener` (registered by `install`): `AsyncPlayerPreLoginEvent` at `MONITOR` starts `preload(uuid)` for every key; a disallowed `PlayerLoginEvent` calls `cancelPending`; `PlayerJoinEvent` at `LOWEST` promotes the loaded values or applies the `JoinPolicy`; `PlayerQuitEvent` at `MONITOR` saves dirty keys inline and evicts. Pending entries that never join are swept after four load timeouts.
+
+`PlayerDataOptions(joinPolicy, loadTimeout, autosaveInterval, kickMessage, flushTimeout)` with `withX` copies. `JoinPolicy.KICK` (default) kicks a player whose data has not arrived `loadTimeout` after the join; `JoinPolicy.DEFER` lets them in and `get` returns empty until `whenReady(player)` completes. There is no blocking policy: the join runs on the region thread on Folia. Keys registered after players are online are loaded for them immediately. Load failures are logged; under `KICK` the player is kicked, under `DEFER` `whenReady` fails.
+
+Threading rule for values: `T` is only touched on the player's thread. `markDirty` announces an in-place mutation; the snapshot function (`Profile::copy` above) runs on the player's scheduler and the copy is what the store writes, so `T` need not be thread-safe. Keys created without a snapshot function pass the value through unchanged, which is right for immutable records replaced with `set`. `quit` and shutdown copy inline because they already own the player or the server is single-threaded. `saveDirty()` writes only dirty keys; `saveAll()` writes everything and is what `disable` runs with a bounded wait, logging any key that did not flush.
+
+Testing: `PlayerDataService.create(options, clock)` has no plugin and no listener, so tests call `preload`, `join(player)` and `quit` directly with a `ProxyFakes` player under `FakeScheduler`. Entity-anchored work (snapshots, kicks) lands one tick later, so drive it with `tick()` before `runAll()`.
+
+Kotlin: `playerDataKey<Profile>("profile") { Profile() }`, `playerDataKey<Profile>("profile", { Profile() }, Profile::copy)`, `player.data(service, key)`, `player.setData(service, key, value)`.
+
 ## Repositories And Data Items
 
 Deprecated since 2.1 in favour of [Stores](#stores). Kept working; `FileDataRepository` shares its atomic file writer with `FileStore` and the two read each other's files through `StoreCodec.dataItem`.

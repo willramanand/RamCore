@@ -261,3 +261,24 @@ fun partyManager(options: PartyOptions, store: dev.willram.ramcore.party.PartySt
 
 fun objectiveTracker(store: dev.willram.ramcore.objective.ObjectiveProgressStore): ObjectiveTracker =
     ObjectiveTracker.create(store)
+
+// ---- player data (task 1.2) ----
+
+/** A [dev.willram.ramcore.playerdata.PlayerDataKey] whose values are handed to the async writer as-is (immutable values). */
+inline fun <reified T : Any> playerDataKey(id: String, noinline default: () -> T): dev.willram.ramcore.playerdata.PlayerDataKey<T> =
+    dev.willram.ramcore.playerdata.PlayerDataKey.of(id, T::class.java, default)
+
+/** A [dev.willram.ramcore.playerdata.PlayerDataKey] whose values are copied on the player's thread before every async save. */
+inline fun <reified T : Any> playerDataKey(id: String, noinline default: () -> T, noinline snapshot: (T) -> T): dev.willram.ramcore.playerdata.PlayerDataKey<T> =
+    dev.willram.ramcore.playerdata.PlayerDataKey.of(id, T::class.java, default, snapshot)
+
+fun playerDataOptions(configure: dev.willram.ramcore.playerdata.PlayerDataOptions.() -> dev.willram.ramcore.playerdata.PlayerDataOptions = { this }): dev.willram.ramcore.playerdata.PlayerDataOptions =
+    dev.willram.ramcore.playerdata.PlayerDataOptions.defaults().configure()
+
+/** The loaded value for this player, or null before the load completes (see [dev.willram.ramcore.playerdata.JoinPolicy.DEFER]). */
+fun <T : Any> org.bukkit.entity.Player.data(service: dev.willram.ramcore.playerdata.PlayerDataService, key: dev.willram.ramcore.playerdata.PlayerDataKey<T>): T? =
+    service.get(this, key).orElse(null)
+
+/** Replaces the value and marks it dirty. */
+fun <T : Any> org.bukkit.entity.Player.setData(service: dev.willram.ramcore.playerdata.PlayerDataService, key: dev.willram.ramcore.playerdata.PlayerDataKey<T>, value: T) =
+    service.set(this, key, value)
