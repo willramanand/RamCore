@@ -299,6 +299,8 @@ In `ramcore-kotlin`, `kotlinx-coroutines-core` shaded and relocated into `dev.wi
 
 Stability: **experimental**. Docs: Kotlin Extensions section gains "Coroutines".
 
+**Outcome (done 2026-09-10, one commit on `phase/c-engineering-quality`).** Landed as designed in `ramcore-kotlin`: `Promise.await()` via `suspendCancellableCoroutine` (cancel propagates to `Promise.cancel()`, failure unwraps `CompletionException`), `RamDispatchers` (`global`/`async`/`region`/`entity`/`player`) as `RamContextDispatcher` delegating to `Schedulers.forContext(ctx).execute` with `isDispatchNeeded` skipping the hop when already anchored (global via `isSyncThread`, region/entity via `Bukkit.isOwnedByCurrentRegion`), `TerminableConsumer.coroutineScope(dispatcher)` and `RamPlugin.launch { }`. kotlinx-coroutines-core 1.8.0 is an `implementation` dep of the kotlin module, shaded and relocated to `dev.willram.ramcore.libs.kotlinx.coroutines` by the paper module. The two shadowed `CommandContext.get`/`resolve` extensions were removed. Tests use `runBlocking` + `FakeScheduler` (not `runTest`, to avoid adding kotlinx-coroutines-test): await value/failure, cancellation propagation, and dispatcher routing (async queues, global runs inline on the sync thread). 5 tests; full build 387 green, kotlinx relocated with no leaks.
+
 ### 2.5 Operational basics — **L** (3 PRs)
 
 - **Config.** RamCore has no `config.yml`; add one via `BukkitConfig` with keys `metrics.enabled` (true), `update-checker.enabled` (true), `storage.sql.*`, `messaging.redis.*`. Loaded in `RamCore.load()`.

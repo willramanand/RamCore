@@ -68,6 +68,7 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     relocate("com.typesafe.config", "dev.willram.ramcore.libs.typesafe.config")
     relocate("com.flowpowered.math", "dev.willram.ramcore.libs.flowpowered.math")
     relocate("org.yaml.snakeyaml", "dev.willram.ramcore.libs.snakeyaml")
+    relocate("kotlinx.coroutines", "dev.willram.ramcore.libs.kotlinx.coroutines")
 
     exclude("module-info.class")
     exclude("META-INF/versions/*/module-info.class")

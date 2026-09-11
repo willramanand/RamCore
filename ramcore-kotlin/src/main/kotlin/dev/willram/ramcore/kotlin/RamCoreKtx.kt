@@ -179,11 +179,6 @@ fun CommandSpec.Node.cooldownTicks(ticks: Long): CommandSpec.Node =
 fun CommandSpec.Node.cooldown(cooldown: Cooldown, key: (CommandContext) -> Any): CommandSpec.Node =
     cooldown(CommandCooldown.keyed(cooldown, key))
 
-operator fun <T : Any> CommandContext.get(argument: CommandArgument<T>): T = this.get(argument)
-
-fun <T : Any, R : ArgumentResolver<T>> CommandContext.resolve(argument: ResolvedCommandArgument<T, R>): T =
-    this.resolve(argument)
-
 fun Entity.taskContext(): TaskContext = TaskContext.of(this)
 
 fun Location.taskContext(): TaskContext = TaskContext.of(this)

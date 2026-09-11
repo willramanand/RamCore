@@ -2681,7 +2681,6 @@ Top-level helpers include:
 - `Commands.register(...)`
 - command DSL `literal {}` and `argument {}` helpers
 - command cooldown helpers `cooldown(amount, unit)`, `cooldownTicks(ticks)`, and `cooldown(cooldown) { ctx -> key }`
-- `CommandContext[arg]`
 - `Entity.taskContext()`, `Location.taskContext()`, `Block.taskContext()`, `BlockState.taskContext()`, `Chunk.taskContext()`, and `World.chunkTaskContext(...)`
 - NPC helpers `npcSpec<T> { ... }`, `npcRegistry(plugin)`, and `Location.spawnNpc(spec)`
 - party helpers `partyOptions()`, `partyManager()`, and `partyManager(options)`
@@ -2700,6 +2699,23 @@ val spec = command("hello") {
     executes { ctx -> ctx.msg("<green>Hello.") }
 }
 ```
+
+### Coroutines
+
+In `ramcore-kotlin`, backed by `kotlinx-coroutines-core` (shaded and relocated into `dev.willram.ramcore.libs.kotlinx`).
+
+- `suspend fun <T> Promise<T>.await()` suspends until the promise completes; cancelling the coroutine calls `Promise.cancel()`, and a failed promise throws its cause.
+- `RamDispatchers.global`, `.async`, `.region(location)`, `.entity(entity)`, `.player(player)` are `CoroutineDispatcher`s that route continuations through RamCore's schedulers. Already-anchored code is not re-dispatched: global checks `Schedulers.isSyncThread()`, region/entity check `Bukkit.isOwnedByCurrentRegion(...)`.
+- `TerminableConsumer.coroutineScope(dispatcher)` returns a `SupervisorJob`-backed scope cancelled when the consumer closes; `RamPlugin.launch(dispatcher) { ... }` launches a plugin-bound coroutine.
+
+```kotlin
+plugin.launch(RamDispatchers.async) {
+    val profile = store.load(id).await()          // suspends on the async scheduler
+    withContext(RamDispatchers.player(player)) { player.sendMessage(profile.name) }
+}
+```
+
+Stability: experimental.
 
 ## Package Map
 
