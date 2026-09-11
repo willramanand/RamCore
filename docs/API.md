@@ -571,6 +571,16 @@ Primary types:
 - `ResourcePackPromptTracker` sends prompts, listens for `PlayerResourcePackStatusEvent`, and marks timed-out requests.
 - `ResourcePackItems` and `ResourcePackSounds` apply tracked item model data or create custom Adventure sounds.
 
+Building and hosting a pack (experimental, greenfield in 3.1):
+
+- `AssetSource` supplies bytes for one in-pack file, lazily, from bytes/string/file/classpath.
+- `ResourcePackBuilder` assembles the pack: `item(id, texture)` writes the modern item-model definition (`assets/<ns>/items/<name>.json`), a basic generated model, and the texture; `texture(id, png)` and `file(path, source)` add arbitrary files. `buildTo(zip[, manifest])` writes `pack.mcmeta`, zips deterministically (sorted entries, fixed timestamps → identical content yields an identical zip and SHA-1), hashes it, and returns a `PackBuildReport(added, changed, removed, unchanged, sha1Hex)` diffed against a per-file manifest. `metadata(uri, report)` produces a `ResourcePackMetadata`.
+- `PackWriters` writes the small JSON files (no Gson dependency); `PackFormats` maps a Minecraft version to a `pack_format`; `Sha1` hashes.
+- `ResourcePackHost` is an optional JDK `HttpServer` that serves one zip (swap it with `setPack` after a rebuild); host the zip externally for production and skip it.
+- `ResourcePackPromptSweeper.start(tracker, intervalTicks)` runs `ResourcePackPromptTracker.sweepTimeouts` on a repeating async timer so pending prompts time out on their own.
+
+All builder/host work is blocking file/network I/O — run it on an async scheduler. The builder is dependency-free and unit-tested off-server. Stability: **experimental** for the builder/host/sweeper; the id/asset/prompt tracking types remain **stable**.
+
 Example:
 
 ```java
@@ -609,7 +619,25 @@ ResourcePackPrompt prompt = ResourcePacks.prompt(
 tracker.send(player, prompt);
 ```
 
-Call `tracker.sweepTimeouts(nowMillis)` from a scheduled task if you use prompt timeouts. Status events update tracked requests automatically while the tracker is registered as a Bukkit listener.
+Call `tracker.sweepTimeouts(nowMillis)` from a scheduled task if you use prompt timeouts, or start `ResourcePackPromptSweeper.start(tracker, 20L)` to do it automatically. Status events update tracked requests automatically while the tracker is registered as a Bukkit listener.
+
+Building, hosting, and prompting a generated pack:
+
+```java
+PackBuildReport report = ResourcePackBuilder.create()
+        .name("Example Pack")
+        .minecraftVersion("1.21.4")
+        .item(ResourcePackAssetId.of("example", "fire_sword"), AssetSource.ofResource(getClassLoader(), "textures/fire_sword.png"))
+        .buildTo(getDataFolder().toPath().resolve("pack.zip"));
+
+if (report.dirty()) {
+    ResourcePackHost host = bind(ResourcePackHost.start("0.0.0.0", 8123, getDataFolder().toPath().resolve("pack.zip")));
+    ResourcePackPrompt prompt = ResourcePackPrompt.builder(host.uri("cdn.example.com", "pack.zip"), report.sha1Hex())
+            .forced(true)
+            .build();
+    ResourcePacks.tracker().send(player, prompt);
+}
+```
 
 ## Displays And Holograms
 

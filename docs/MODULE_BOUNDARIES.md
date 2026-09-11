@@ -26,7 +26,7 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Menus and item builders | `menu`, `item` | Core | Stable | Menu operations are viewer-scheduler anchored; direct inventory/entity access must stay anchored. |
 | Item data components | `item.component` | Paper platform | Paper-experimental | Wraps Paper experimental APIs; use RamCore profiles/patches as the compatibility boundary. |
 | Item NBT | `item.nbt` | Platform adapter | NMS-backed where raw SNBT is used | Binary/meta/PDC snapshots are safe; raw SNBT requires capability checks. |
-| Resource packs | `resourcepack` | Core | Stable | Prompt tracking is event-driven and scheduler-safe. |
+| Resource packs | `resourcepack` | Core | Stable; builder/host/sweeper experimental | Prompt tracking is event-driven and scheduler-safe. The builder/host do blocking file/network I/O — run on the async scheduler; both are dependency-free (hand-written JSON, JDK HttpServer) and off-server testable. |
 | Loot and trades | `loot`, `trade` | Core/gameplay | Stable | Pure generation is safe; world/entity application must schedule. |
 | Stats | `stat` (config type `stats`) | Core/gameplay | Experimental | Snapshots are read on the requesting thread and sources read live equipment, so request them on the player's thread; invalidation listeners run on the event thread. `DamageCalculator` and `StatSnapshot` are pure. |
 | Abilities | `ability` (config type `abilities`) | Core/gameplay | Experimental | Casts run on the caster's thread; cast timers/channels schedule through `Schedulers` on the caster's scheduler. Triggers register through the functional `Events` API and unbind with the plugin. Cooldowns/combos use an injectable clock. |
