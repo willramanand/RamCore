@@ -30,7 +30,8 @@ off-server (see the per-task `Outcome` notes in `docs/ROADMAP_EXECUTION_PLAN.md`
   (`/ramcore diagnostics reload <pack>`) and `RealTimeScheduler`; both have off-server tests with
   `FakeClock`/`FakeScheduler`.
 - To run the example: build RamCore (`./gradlew build`), install the RamCore jar and the sample jar on
-  a test server, and drive the `/sample …` commands above.
+  a test server, and drive the `/sample …` commands above. Step-by-step Paper + Folia instructions and
+  per-scenario expectations are in `docs/SMOKE_TEST.md`.
 
 ## Full build
 
