@@ -178,6 +178,8 @@
 
                                     <include>org.spongepowered:configurate-core</include>
                                     <include>org.spongepowered:configurate-hocon</include>
+                                    <include>org.spongepowered:configurate-yaml</include>
+                                    <include>org.yaml:snakeyaml</include>
 
                                     <include>com.typesafe:config</include>
                                     <include>com.flowpowered:flow-math</include>
@@ -193,6 +195,11 @@
                                 <relocation>
                                     <pattern>com.typesafe.config</pattern>
                                     <shadedPattern>dev.willram.ramcore.libs.typesafe.config</shadedPattern>
+                                </relocation>
+
+                                <relocation>
+                                    <pattern>org.yaml.snakeyaml</pattern>
+                                    <shadedPattern>dev.willram.ramcore.libs.snakeyaml</shadedPattern>
                                 </relocation>
 
                                 <relocation>
@@ -307,6 +314,22 @@
             <groupId>org.spongepowered</groupId>
             <artifactId>configurate-hocon</artifactId>
             <version>4.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.spongepowered</groupId>
+            <artifactId>configurate-yaml</artifactId>
+            <version>4.1.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.errorprone</groupId>
+                    <artifactId>error_prone_annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.spongepowered</groupId>
+                    <artifactId>configurate-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

@@ -25,8 +25,6 @@
 
 package dev.willram.ramcore.serialize;
 
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
-
 import java.util.Base64;
 
 class Base64Util {
@@ -39,9 +37,9 @@ class Base64Util {
         try {
             return Base64.getDecoder().decode(src);
         } catch (IllegalArgumentException e) {
-            // compat with the previously used base64 encoder
+            // compat with a previously used line-wrapping base64 encoder
             try {
-                return Base64Coder.decodeLines(src);
+                return Base64.getMimeDecoder().decode(src);
             } catch (Exception ignored) {
                 throw e;
             }
