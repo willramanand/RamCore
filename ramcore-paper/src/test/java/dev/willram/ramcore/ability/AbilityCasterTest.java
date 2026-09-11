@@ -167,4 +167,44 @@ public final class AbilityCasterTest {
         assertEquals(List.of("no target"), result.errors());
         assertEquals(0, runs.get());
     }
+
+    @Test
+    public void telegraphIsShownWhileCastingAndClearedOnCompletion() {
+        AtomicInteger shows = new AtomicInteger();
+        AtomicInteger clears = new AtomicInteger();
+        Ability ability = Ability.builder(FIREBALL)
+                .castTicks(2)
+                .telegraph(caster -> {
+                    shows.incrementAndGet();
+                    return clears::incrementAndGet;
+                })
+                .action(ctx -> {
+                })
+                .build();
+        AbilityCaster caster = caster();
+
+        caster.cast(ability, AbilityTrigger.HOTBAR);
+        assertEquals(1, shows.get());
+        assertEquals(0, clears.get());
+
+        this.scheduler.tick(2);
+        assertEquals(1, clears.get());
+    }
+
+    @Test
+    public void telegraphIsClearedOnInterrupt() {
+        AtomicInteger clears = new AtomicInteger();
+        Ability ability = Ability.builder(FIREBALL)
+                .castTicks(4)
+                .telegraph(caster -> clears::incrementAndGet)
+                .action(ctx -> {
+                })
+                .build();
+        AbilityCaster caster = caster();
+
+        caster.cast(ability, AbilityTrigger.HOTBAR);
+        assertEquals(0, clears.get());
+        caster.interrupt();
+        assertEquals(1, clears.get());
+    }
 }

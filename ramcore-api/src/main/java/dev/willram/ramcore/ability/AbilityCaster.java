@@ -44,6 +44,7 @@ public final class AbilityCaster implements Terminable {
     private Ability casting;
     private Promise<Void> castPromise;
     private Task channelTask;
+    private Terminable telegraph;
     private boolean closed;
 
     private AbilityCaster(@NotNull Player player, @Nullable StatService statService, @NotNull Clock clock) {
@@ -135,9 +136,11 @@ public final class AbilityCaster implements Terminable {
         }
 
         this.casting = ability;
+        showTelegraph(ability);
         this.castPromise = Schedulers.runLater(this.player, () -> {
             this.casting = null;
             this.castPromise = null;
+            clearTelegraph();
             execute(ability, context);
         }, ability.castTicks());
         return CastResult.of(AbilityCastStatus.CASTING, id);
@@ -148,6 +151,7 @@ public final class AbilityCaster implements Terminable {
         int total = channel.tickCount();
         int[] index = {0};
         this.casting = ability;
+        showTelegraph(ability);
         this.channelTask = Schedulers.runTimerTask(this.player, channel.intervalTicks(), channel.intervalTicks(),
                 task -> {
                     index[0]++;
@@ -156,10 +160,22 @@ public final class AbilityCaster implements Terminable {
                         task.stop();
                         this.casting = null;
                         this.channelTask = null;
+                        clearTelegraph();
                         execute(ability, context);
                     }
                 });
         return CastResult.of(AbilityCastStatus.CASTING, ability.id());
+    }
+
+    private void showTelegraph(@NotNull Ability ability) {
+        ability.telegraph().ifPresent(telegraph -> this.telegraph = telegraph.show(this.player));
+    }
+
+    private void clearTelegraph() {
+        if (this.telegraph != null) {
+            this.telegraph.closeAndReportException();
+            this.telegraph = null;
+        }
     }
 
     private void execute(@NotNull Ability ability, @NotNull AbilityContext context) {
@@ -196,6 +212,7 @@ public final class AbilityCaster implements Terminable {
         if (this.channelTask != null) {
             this.channelTask.stop();
         }
+        clearTelegraph();
         this.casting = null;
         this.castPromise = null;
         this.channelTask = null;

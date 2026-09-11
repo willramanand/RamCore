@@ -2,10 +2,13 @@ package dev.willram.ramcore.example;
 
 import dev.willram.ramcore.RamPlugin;
 import dev.willram.ramcore.ability.Ability;
+import dev.willram.ramcore.ability.AbilityAiming;
 import dev.willram.ramcore.ability.AbilityRegistry;
 import dev.willram.ramcore.ability.AbilityService;
+import dev.willram.ramcore.ability.AbilityTargeting;
 import dev.willram.ramcore.ability.AbilityTargets;
 import dev.willram.ramcore.ability.AbilityTrigger;
+import dev.willram.ramcore.ability.telegraph.Telegraphs;
 import dev.willram.ramcore.commands.CommandSpec;
 import dev.willram.ramcore.commands.RamCommands;
 import dev.willram.ramcore.content.ContentId;
@@ -109,6 +112,17 @@ public final class SamplePlugin extends RamPlugin {
                         .description("Cast the example ability.")
                         .executes(context -> context.reply(
                                 "<gray>" + this.abilityService.cast(context.requirePlayer(), STRIKE, AbilityTrigger.COMMAND).status())))
+                .literal("aim", aim -> aim
+                        .description("Enter interactive aim mode, then ignite what you confirm.")
+                        .executes(context -> {
+                            // 3.9 — forgiving cone targeting with a live telegraph + glow lock-on.
+                            AbilityTargeting targeting = AbilityTargets.cone(20.0D, 30.0D);
+                            AbilityAiming.begin(context.requirePlayer(), targeting, Telegraphs.cone(20.0D, 30.0D))
+                                    .result()
+                                    .thenAccept(TaskContext.global(), targets -> targets.forEach(target ->
+                                            Schedulers.run(target, () -> target.setFireTicks(80))));
+                            context.reply("<gray>Aiming — <white>click<gray> to confirm, move to cancel.");
+                        }))
                 .literal("talk", talk -> talk
                         .description("Open the example dialogue.")
                         .executes(context -> DialogueSession.chat(context.requirePlayer(),

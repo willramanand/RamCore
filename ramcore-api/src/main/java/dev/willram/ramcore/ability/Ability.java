@@ -1,5 +1,6 @@
 package dev.willram.ramcore.ability;
 
+import dev.willram.ramcore.ability.telegraph.Telegraph;
 import dev.willram.ramcore.content.ContentId;
 import dev.willram.ramcore.exception.RamPreconditions;
 import dev.willram.ramcore.presentation.PresentationEffect;
@@ -26,6 +27,7 @@ public final class Ability {
     private final List<PresentationEffect> effects;
     private final AbilityAction action;
     private final AbilityChannel channel;
+    private final Telegraph telegraph;
 
     private Ability(Builder builder) {
         this.id = requireNonNull(builder.id, "id");
@@ -36,6 +38,7 @@ public final class Ability {
         this.effects = List.copyOf(builder.effects);
         this.action = builder.action;
         this.channel = builder.channel;
+        this.telegraph = builder.telegraph;
     }
 
     @NotNull
@@ -86,6 +89,12 @@ public final class Ability {
         return Optional.ofNullable(this.channel);
     }
 
+    /** The aim preview shown while the ability casts/channels, if any. */
+    @NotNull
+    public Optional<Telegraph> telegraph() {
+        return Optional.ofNullable(this.telegraph);
+    }
+
     public static final class Builder {
         private final ContentId id;
         private Duration cooldown = Duration.ZERO;
@@ -95,6 +104,7 @@ public final class Ability {
         private List<PresentationEffect> effects = List.of();
         private AbilityAction action = AbilityAction.NONE;
         private AbilityChannel channel;
+        private Telegraph telegraph;
 
         private Builder(@NotNull ContentId id) {
             this.id = requireNonNull(id, "id");
@@ -156,6 +166,20 @@ public final class Ability {
         @NotNull
         public Builder channel(@NotNull AbilityChannel channel) {
             this.channel = requireNonNull(channel, "channel");
+            return this;
+        }
+
+        /**
+         * Shows a server-side aim preview ({@link Telegraph}) while the ability casts or channels,
+         * cleared automatically when the cast completes or is interrupted. Has no effect on an instant
+         * ability (no cast window to preview).
+         *
+         * @param telegraph the aim preview
+         * @return this builder
+         */
+        @NotNull
+        public Builder telegraph(@NotNull Telegraph telegraph) {
+            this.telegraph = requireNonNull(telegraph, "telegraph");
             return this;
         }
 
