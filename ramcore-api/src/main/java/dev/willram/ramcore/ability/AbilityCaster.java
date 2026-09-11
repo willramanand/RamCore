@@ -5,6 +5,7 @@ import dev.willram.ramcore.presentation.PresentationContext;
 import dev.willram.ramcore.presentation.PresentationEffect;
 import dev.willram.ramcore.promise.Promise;
 import dev.willram.ramcore.scheduler.Schedulers;
+import dev.willram.ramcore.scheduler.Task;
 import dev.willram.ramcore.stat.StatService;
 import dev.willram.ramcore.stat.StatSnapshot;
 import dev.willram.ramcore.terminable.Terminable;
@@ -42,6 +43,7 @@ public final class AbilityCaster implements Terminable {
 
     private Ability casting;
     private Promise<Void> castPromise;
+    private Task channelTask;
     private boolean closed;
 
     private AbilityCaster(@NotNull Player player, @Nullable StatService statService, @NotNull Clock clock) {
@@ -123,6 +125,10 @@ public final class AbilityCaster implements Terminable {
             return CastResult.invalid(id, errors);
         }
 
+        if (ability.channel().isPresent()) {
+            return beginChannel(ability, context);
+        }
+
         if (ability.castTicks() <= 0L) {
             execute(ability, context);
             return CastResult.of(AbilityCastStatus.CAST, id);
@@ -135,6 +141,25 @@ public final class AbilityCaster implements Terminable {
             execute(ability, context);
         }, ability.castTicks());
         return CastResult.of(AbilityCastStatus.CASTING, id);
+    }
+
+    private CastResult beginChannel(@NotNull Ability ability, @NotNull AbilityContext context) {
+        AbilityChannel channel = ability.channel().orElseThrow();
+        int total = channel.tickCount();
+        int[] index = {0};
+        this.casting = ability;
+        this.channelTask = Schedulers.runTimerTask(this.player, channel.intervalTicks(), channel.intervalTicks(),
+                task -> {
+                    index[0]++;
+                    channel.onTick().tick(context, index[0]);
+                    if (index[0] >= total) {
+                        task.stop();
+                        this.casting = null;
+                        this.channelTask = null;
+                        execute(ability, context);
+                    }
+                });
+        return CastResult.of(AbilityCastStatus.CASTING, ability.id());
     }
 
     private void execute(@NotNull Ability ability, @NotNull AbilityContext context) {
@@ -168,8 +193,12 @@ public final class AbilityCaster implements Terminable {
         if (this.castPromise != null) {
             this.castPromise.cancel();
         }
+        if (this.channelTask != null) {
+            this.channelTask.stop();
+        }
         this.casting = null;
         this.castPromise = null;
+        this.channelTask = null;
         return true;
     }
 

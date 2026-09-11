@@ -29,6 +29,7 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Resource packs | `resourcepack` | Core | Stable | Prompt tracking is event-driven and scheduler-safe. |
 | Loot and trades | `loot`, `trade` | Core/gameplay | Stable | Pure generation is safe; world/entity application must schedule. |
 | Stats | `stat` (config type `stats`) | Core/gameplay | Experimental | Snapshots are read on the requesting thread and sources read live equipment, so request them on the player's thread; invalidation listeners run on the event thread. `DamageCalculator` and `StatSnapshot` are pure. |
+| Abilities | `ability` (config type `abilities`) | Core/gameplay | Experimental | Casts run on the caster's thread; cast timers/channels schedule through `Schedulers` on the caster's scheduler. Triggers register through the functional `Events` API and unbind with the plugin. Cooldowns/combos use an injectable clock. |
 | Diagnostics | `diagnostics` | Built-in optional surface | Stable command contract | Enabled by default, permission-gated, and removable with `-Dramcore.diagnostics=false`. |
 | Integrations | `integration` | Optional integration boundary | Stable | Detection is safe; integration-specific calls follow that integration's threading rules. |
 | Protocol and packets | `protocol`, `packet` | Optional integration | Experimental / adapter-backed | Logical state is safe; actual sends require a transport such as ProtocolLib. |

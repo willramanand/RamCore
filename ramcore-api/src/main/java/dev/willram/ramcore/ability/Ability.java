@@ -25,6 +25,7 @@ public final class Ability {
     private final AbilityTargeting targeting;
     private final List<PresentationEffect> effects;
     private final AbilityAction action;
+    private final AbilityChannel channel;
 
     private Ability(Builder builder) {
         this.id = requireNonNull(builder.id, "id");
@@ -34,6 +35,7 @@ public final class Ability {
         this.targeting = builder.targeting;
         this.effects = List.copyOf(builder.effects);
         this.action = builder.action;
+        this.channel = builder.channel;
     }
 
     @NotNull
@@ -78,6 +80,12 @@ public final class Ability {
         return this.action;
     }
 
+    /** The repeating channel, if this ability channels. */
+    @NotNull
+    public Optional<AbilityChannel> channel() {
+        return Optional.ofNullable(this.channel);
+    }
+
     public static final class Builder {
         private final ContentId id;
         private Duration cooldown = Duration.ZERO;
@@ -86,6 +94,7 @@ public final class Ability {
         private AbilityTargeting targeting = AbilityTargets.self();
         private List<PresentationEffect> effects = List.of();
         private AbilityAction action = AbilityAction.NONE;
+        private AbilityChannel channel;
 
         private Builder(@NotNull ContentId id) {
             this.id = requireNonNull(id, "id");
@@ -134,6 +143,19 @@ public final class Ability {
         @NotNull
         public Builder action(@NotNull AbilityAction action) {
             this.action = requireNonNull(action, "action");
+            return this;
+        }
+
+        /**
+         * Makes this ability channel: {@code onTick} fires on the caster's scheduler every interval
+         * until the total elapses, then the action runs. Replaces the plain cast timer.
+         *
+         * @param channel the channel
+         * @return this builder
+         */
+        @NotNull
+        public Builder channel(@NotNull AbilityChannel channel) {
+            this.channel = requireNonNull(channel, "channel");
             return this;
         }
 

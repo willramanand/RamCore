@@ -2535,6 +2535,43 @@ double power = service.snapshot(player).value(ContentId.of("example", "power"));
 
 Thread contract: a snapshot is read on the thread that calls `snapshot(Player)`, and sources read live equipment, so request snapshots on the player's thread. Stability: **experimental**.
 
+## Abilities
+
+Package: `dev.willram.ramcore.ability` (config type `abilities` via `content.spec.AbilitySpec`)
+
+A player ability framework: definitions in a registry, a per-player caster state machine, pluggable triggers, and experimental channelling/interrupt/combo extensions. Costs read from the `stat` system; visuals reuse `presentation.PresentationEffect`.
+
+Primary types:
+
+- `Ability` (immutable builder) — `id`, `cooldown` (`Duration`), optional `StatCost`, `castTicks`, `AbilityTargeting`, `PresentationEffect`s, `AbilityAction`, and an optional `AbilityChannel`.
+- `StatCost(statId, amount)` — a read-only gate: `affordable(StatSnapshot)`. Stats have no spendable pool, so a consumer that wants a real resource deducts it in the action.
+- `AbilityTargeting` + `AbilityTargets` — `self`, `none`, `radius`, `nearest` (via `selector`), `lookingAt` (Paper ray-trace).
+- `AbilityAction` — functional `run(AbilityContext)` + default `validate` (mirrors `reward.RewardAction`); `AbilityContext(caster, targets, snapshot, trigger, metadata)`.
+- `AbilityRegistry` — owner-scoped over `ContentRegistry<Ability>`.
+- `AbilityCaster` — per player. `cast(ability, trigger)` gates cooldown → `StatCost` → `validate`; instant abilities run inline, channelled/`castTicks` abilities schedule on the caster's scheduler; `interrupt()` cancels an in-flight channel (no cooldown applied). Returns a `CastResult` (`AbilityCastStatus`: `CAST`, `CASTING`, `ON_COOLDOWN`, `INSUFFICIENT_COST`, `INVALID`, `BUSY`). Cooldowns are tracked per ability via an injectable `Clock`.
+- `AbilityService` — owns the registry, casters, and trigger bindings (item / hotbar slot / swap-hands); `install(RamPlugin, registry[, StatService])` registers under `AbilityService.KEY` and binds `AbilityTriggerModule`. `cast(player, id, trigger)` resolves and dispatches; combos fire finishers.
+- Triggers: `AbilityTriggerModule` (item-use via `CustomItemIdentityStore`, hotbar via `PlayerItemHeldEvent`, swap-hands, quit cleanup, through the functional `Events` API) and `AbilityCommandModule` (`/<label> <ability>`).
+- Extensions (experimental): `AbilityChannel` + `ChannelTick` (repeating channel that executes on completion), `AbilityInterruptModule` (opt-in: cancel channel on damage/move), `AbilityCombo` + `ComboTracker` (ordered steps within a window fire a finisher).
+
+Example:
+
+```java
+AbilityRegistry abilities = new AbilityRegistry();
+abilities.register("example", Ability.builder(ContentId.of("example", "fireball"))
+        .cooldown(Duration.ofSeconds(5))
+        .castTicks(20)
+        .cost(ContentId.of("example", "mana"), 20.0)
+        .targeting(AbilityTargets.lookingAt(30))
+        .effects(List.of(PresentationEffects.sound(Sound.sound(Key.key("entity.blaze.shoot"), Sound.Source.PLAYER, 1f, 1f))))
+        .action(ctx -> ctx.targets().forEach(t -> t.setFireTicks(60)))
+        .build());
+
+AbilityService service = AbilityService.install(plugin, abilities, statService); // from load()
+service.bindHotbar(0, ContentId.of("example", "fireball"));
+```
+
+Thread contract: casts run on the caster's thread (trigger events and the cast timer both fire there). Stability: **experimental**.
+
 ## Attribute And Combat Helpers
 
 Package: `dev.willram.ramcore.combat`
@@ -2813,6 +2850,7 @@ Stability: experimental.
 | `scheduler` | Paper/Folia-aware scheduling and task contexts. |
 | `selector` | Reusable collection-based player and entity selectors. |
 | `stat` | Custom stat definitions, per-player modifier sources, cached snapshots, and the item stat map. |
+| `ability` | Ability definitions, per-player caster state machine, triggers, and channel/interrupt/combo extensions. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |

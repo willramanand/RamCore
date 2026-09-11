@@ -43,6 +43,7 @@ public final class AbilityService implements Service, Terminable {
     private final Map<UUID, AbilityCaster> casters = new ConcurrentHashMap<>();
     private final Map<NamespacedKey, ContentId> itemBindings = new ConcurrentHashMap<>();
     private final Map<Integer, ContentId> hotbarBindings = new ConcurrentHashMap<>();
+    private final ComboTracker comboTracker;
     private volatile ContentId swapBinding;
     private volatile boolean closed;
 
@@ -52,6 +53,7 @@ public final class AbilityService implements Service, Terminable {
         this.statService = statService;
         this.plugin = plugin;
         this.clock = requireNonNull(clock, "clock");
+        this.comboTracker = new ComboTracker(clock);
     }
 
     /** A service with no plugin attached (tests); nothing listens to Bukkit events. */
@@ -109,6 +111,7 @@ public final class AbilityService implements Service, Terminable {
         if (caster != null) {
             caster.close();
         }
+        this.comboTracker.clear(playerId);
     }
 
     /**
@@ -124,7 +127,41 @@ public final class AbilityService implements Service, Terminable {
         Ability ability = this.registry.get(abilityId).orElseThrow(() -> RamPreconditions.misuse(
                 "no ability registered with id '" + abilityId + "'",
                 "register the ability before binding or casting it"));
-        return caster(player).cast(ability, trigger);
+        CastResult result = caster(player).cast(ability, trigger);
+        if (result.started() && trigger != AbilityTrigger.CUSTOM) {
+            this.comboTracker.record(player.getUniqueId(), abilityId).ifPresent(combo -> {
+                this.comboTracker.clear(player.getUniqueId());
+                this.registry.get(combo.finisher())
+                        .ifPresent(finisher -> caster(player).cast(finisher, AbilityTrigger.CUSTOM));
+            });
+        }
+        return result;
+    }
+
+    /**
+     * Registers a combo: casting its steps in order within its window casts the finisher.
+     *
+     * @param combo the combo
+     */
+    public void registerCombo(@NotNull AbilityCombo combo) {
+        this.comboTracker.register(combo);
+    }
+
+    /** The player's caster if one exists (does not create one). */
+    @NotNull
+    public Optional<AbilityCaster> existingCaster(@NotNull UUID playerId) {
+        return Optional.ofNullable(this.casters.get(requireNonNull(playerId, "playerId")));
+    }
+
+    /**
+     * Interrupts a player's in-progress channel if they have one, without creating a caster.
+     *
+     * @param player the player
+     * @return {@code true} if a channel was interrupted
+     */
+    public boolean interruptIfCasting(@NotNull Player player) {
+        AbilityCaster caster = this.casters.get(player.getUniqueId());
+        return caster != null && caster.casting() && caster.interrupt();
     }
 
     // ---- trigger bindings ----
