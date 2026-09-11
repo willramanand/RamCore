@@ -19,13 +19,15 @@ public final class ChatDialoguePresenter implements DialoguePresenter {
     public void present(@NotNull DialogueSession session, @NotNull DialogueNode node,
                         @NotNull List<DialogueChoice> choices) {
         Player player = session.player();
+        int generation = session.generation();
         player.sendMessage(Texts.render(node.text()));
         for (int i = 0; i < choices.size(); i++) {
             int index = i;
             Component line = Component.text()
                     .append(Component.text((i + 1) + ". "))
                     .append(Texts.render(choices.get(i).label()))
-                    .clickEvent(ClickEvent.callback(audience -> session.choose(index)))
+                    // guard stale clicks: an old chat line or a re-click after the dialogue advanced
+                    .clickEvent(ClickEvent.callback(audience -> session.chooseIfCurrent(index, generation)))
                     .build();
             player.sendMessage(line);
         }
