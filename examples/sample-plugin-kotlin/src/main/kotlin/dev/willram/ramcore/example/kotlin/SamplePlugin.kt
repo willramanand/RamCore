@@ -123,6 +123,10 @@ class SamplePlugin : RamPlugin() {
                             context.reply("<green>Dungeon ready: <white>" + instance.name())
                             instance
                         }
+                        .exceptionallyAsync { throwable ->
+                            context.reply("<red>Dungeon failed: <white>" + (throwable.cause ?: throwable).message)
+                            null
+                        }
                 }
             }
             subcommand("pack") {
