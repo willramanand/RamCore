@@ -120,6 +120,11 @@ public final class SamplePlugin extends RamPlugin {
                                     .thenApply(TaskContext.global(), instance -> {
                                         context.reply("<green>Dungeon ready: <white>" + instance.name());
                                         return instance;
+                                    })
+                                    .exceptionallyAsync(throwable -> {
+                                        Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+                                        context.reply("<red>Dungeon failed: <white>" + cause.getMessage());
+                                        return null;
                                     });
                         }))
                 .literal("pack", pack -> pack
