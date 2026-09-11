@@ -3,7 +3,12 @@ package dev.willram.ramcore.region;
 import dev.willram.ramcore.content.ContentId;
 import dev.willram.ramcore.content.ContentKey;
 import dev.willram.ramcore.content.ContentRegistry;
+import dev.willram.ramcore.serialize.Position;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Registry-backed lightweight region rule evaluator.
@@ -35,6 +40,35 @@ public final class RegionRuleEngine implements AutoCloseable {
 
     public boolean contains(@NotNull ContentId id) {
         return this.regions.contains(id);
+    }
+
+    /**
+     * Every registered region whose shape contains the position, highest priority first.
+     *
+     * @param position the position
+     * @return the containing regions
+     */
+    @NotNull
+    public List<RuleRegion> regionsAt(@NotNull Position position) {
+        return this.regions.entries().stream()
+                .map(entry -> entry.value())
+                .filter(region -> region.shape().contains(position))
+                .sorted(Comparator.comparingInt(RuleRegion::priority).reversed())
+                .toList();
+    }
+
+    /**
+     * A registered region by id.
+     *
+     * @param id the region id
+     * @return the region, or empty
+     */
+    @NotNull
+    public Optional<RuleRegion> region(@NotNull ContentId id) {
+        return this.regions.entries().stream()
+                .map(entry -> entry.value())
+                .filter(region -> region.id().equals(id))
+                .findFirst();
     }
 
     @Override

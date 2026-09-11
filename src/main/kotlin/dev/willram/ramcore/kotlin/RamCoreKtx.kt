@@ -314,3 +314,23 @@ fun org.bukkit.entity.Player.askText(configure: dev.willram.ramcore.input.InputR
 /** Asks this player for text and parses it; a parse failure consumes a retry. */
 fun <T : Any> org.bukkit.entity.Player.askText(parser: dev.willram.ramcore.input.InputParser<T>, configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit = {}): dev.willram.ramcore.promise.Promise<T> =
     dev.willram.ramcore.input.PlayerInput.request(this, inputRequest(configure), parser)
+
+// ---- economy, rewards, placeholders (task 1.5) ----
+
+fun inMemoryEconomy(): dev.willram.ramcore.economy.Economy =
+    dev.willram.ramcore.economy.Economies.inMemory()
+
+fun detectEconomy(registry: dev.willram.ramcore.integration.IntegrationRegistry): dev.willram.ramcore.economy.Economy? =
+    dev.willram.ramcore.economy.Economies.detect(registry).orElse(null)
+
+fun rewardPlan(configure: dev.willram.ramcore.reward.RewardPlan.Builder.() -> Unit): dev.willram.ramcore.reward.RewardPlan =
+    dev.willram.ramcore.reward.RewardPlan.builder().apply(configure).build()
+
+fun placeholderRegistry(configure: dev.willram.ramcore.placeholder.PlaceholderRegistry.() -> Unit = {}): dev.willram.ramcore.placeholder.PlaceholderRegistry =
+    dev.willram.ramcore.placeholder.PlaceholderRegistry.create().apply(configure)
+
+fun ramCorePlaceholders(configure: dev.willram.ramcore.placeholder.RamCorePlaceholders.Builder.() -> Unit): dev.willram.ramcore.placeholder.PlaceholderProvider =
+    dev.willram.ramcore.placeholder.RamCorePlaceholders.builder().apply(configure).build()
+
+fun regionTracker(engine: dev.willram.ramcore.region.RegionRuleEngine): dev.willram.ramcore.region.RegionTracker =
+    dev.willram.ramcore.region.RegionTracker.create(engine)

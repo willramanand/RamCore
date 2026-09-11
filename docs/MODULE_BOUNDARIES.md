@@ -16,6 +16,8 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Stores | `store`, `store.sql` | Core (`store.sql` is an optional backend resolved at runtime) | Stable; `SqlStore` experimental | Folia-safe by design: all I/O on the async scheduler, promises anchored by the caller. |
 | Player data | `playerdata` | Core | Experimental | Folia-safe by design: loads on the async scheduler, values touched only on the player's thread, snapshots taken on the player's scheduler before async writes. |
 | Player input | `input` | Core | Experimental (SIGN Paper-experimental) | Folia-safe: chat handled async, completions hop to the player scheduler; one session per player in a concurrent map. |
+| Economy | `economy` | Core (VaultEconomy is a Paper-module bridge) | Stable; VaultEconomy experimental | Vault provider runs main-thread; InMemoryEconomy thread-safe; net.milkbowl loaded only when Vault present. |
+| Placeholders | `placeholder` | Core (PlaceholderApiBridge is a Paper-module bridge) | Stable; bridge experimental | Resolution is pure; me.clip loaded only when PlaceholderAPI present. |
 | Cooldowns/selectors | `cooldown`, `selector` | Core | Stable | Pure filtering and state checks are Folia-safe; selected entities must be mutated on their context. |
 | PDC helpers | `pdc` | Core | Stable | Holder mutation must run on the holder owner context. |
 | Menus and item builders | `menu`, `item` | Core | Stable | Menu operations are viewer-scheduler anchored; direct inventory/entity access must stay anchored. |

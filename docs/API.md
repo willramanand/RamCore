@@ -350,6 +350,9 @@ Rules can be conditional with `rule.when(query -> ...)`. Region priority is appl
 
 ## Rewards
 
+Concrete actions live in `RewardActions`: `money(economy, amount)`, `command(line)` (`%player%` substituted), `message(component)`, `item(stack)`, `permissionCheck(node)`. `RewardSubjects.playerId(context)` / `onlinePlayer(context)` resolve a `UUID`, `OfflinePlayer` or `Player` subject. The `Rewards` facade exposes `engine()` and `plan()`.
+
+
 Package: `dev.willram.ramcore.reward`
 
 RamCore rewards provide a generic validation, preview, and execution pipeline separate from loot generation.
@@ -825,6 +828,44 @@ integrations.register(new DetectedIntegrationProvider(descriptor, new BukkitPlug
 ```
 
 Use `Integrations.standard(detector)` in tests or custom bootstrap code when Bukkit's plugin manager should not be accessed directly.
+
+## Economy
+
+Package: `dev.willram.ramcore.economy`
+
+Stability: stable for `Economy`/`InMemoryEconomy`; `VaultEconomy` experimental. Threading: `InMemoryEconomy` is thread-safe; a Vault-backed economy runs on the main thread and does not hop, so callers choose the context.
+
+`Economy` is a minimal per-`UUID` abstraction: `balance`, `has`, `withdraw`, `deposit` (returning `EconomyResult(success, newBalance, message)`), `format`, `currencyName(plural)`. `Economies.inMemory()` returns a thread-safe map-backed economy that never goes negative. `Economies.detect(registry)` returns a Vault-backed economy only when the integration registry reports Vault available and a provider is registered; `net.milkbowl` classes are not touched otherwise, so it is safe to call when Vault is absent.
+
+```java
+Economy economy = Economies.detect(Integrations.standard()).orElseGet(Economies::inMemory);
+if (economy.withdraw(player, 50).success()) { ... }
+```
+
+## Placeholders
+
+Package: `dev.willram.ramcore.placeholder`
+
+Stability: stable for the abstractions; the PlaceholderAPI bridge is experimental.
+
+`PlaceholderProvider { String id(); @Nullable String resolve(OfflinePlayer, String params); }`. `PlaceholderRegistry` resolves a key of the form `<id>_<params>` and bridges every provider into MiniMessage via `tagResolver(player)` (so `<ramcore:'party_size'>` resolves through the `ramcore` provider). `PlaceholderApiBridge.register(integrations, registry, author, version)` registers one `PlaceholderExpansion` per provider when PlaceholderAPI is present, and returns 0 (touching no `me.clip` classes) when it is absent.
+
+Built-ins are opt-in because RamCore holds no gameplay instances:
+
+```java
+PlaceholderProvider ramcore = RamCorePlaceholders.builder()
+        .parties(partyManager)
+        .cooldowns("combat", combatTracker)   // CooldownTracker<String>
+        .objectives(objectiveTracker)
+        .regions(regionEngine)
+        .build();                              // provider id "ramcore"
+```
+
+Params: `party_size`, `party_leader`, `cooldown_<name>_<key>` (remaining seconds), `objective_<namespace:value>_<task>` (current amount), `region` (highest-priority region id at the player's location). Unwired or unknown params resolve to null.
+
+## Region Tracking
+
+`RegionTracker` (package `dev.willram.ramcore.region`) tracks which `RuleRegion`s each player stands in and fires `RegionEnterEvent`/`RegionExitEvent` on transitions. Register it as a listener and bind it; it watches move (block-change only), teleport, world change, join and quit. `RegionRuleEngine.regionsAt(position)` lists containing regions highest-priority first, and `region(id)` looks one up. The transition logic (`transition(playerId, player, position)`, `clear(playerId, player)`) is separable from Bukkit wiring, so it is tested directly with positions and a custom `TransitionHandler`. Folia: the move event runs on the player's region; the current sets live in a concurrent map.
 
 ## Commands
 
