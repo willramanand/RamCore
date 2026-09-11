@@ -5,6 +5,7 @@ description: Kotlin example plugin demonstrating RamCore gameplay platform APIs.
 authors:
   - willramanand
 api-version: '1.21'
+folia-supported: true
 dependencies:
   server:
     RamCore:
