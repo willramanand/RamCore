@@ -334,3 +334,12 @@ fun ramCorePlaceholders(configure: dev.willram.ramcore.placeholder.RamCorePlaceh
 
 fun regionTracker(engine: dev.willram.ramcore.region.RegionRuleEngine): dev.willram.ramcore.region.RegionTracker =
     dev.willram.ramcore.region.RegionTracker.create(engine)
+
+// ---- content definitions (task 1.6) ----
+
+fun contentLoad(root: java.nio.file.Path): dev.willram.ramcore.content.ContentLoadResult =
+    dev.willram.ramcore.content.ContentLoader.load(root)
+
+/** Builds a SpecLoader and loads a directory: `contentLoader(dir) { deserializer("items", ItemSpec::deserialize) }`. */
+fun contentLoader(root: java.nio.file.Path, configure: dev.willram.ramcore.content.SpecLoader.() -> Unit): dev.willram.ramcore.content.SpecLoadResult =
+    dev.willram.ramcore.content.SpecLoader.create().apply(configure).load(root)

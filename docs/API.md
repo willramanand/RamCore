@@ -285,6 +285,35 @@ ItemTemplate template = items.require(ContentId.parse("example:fire_sword"));
 
 Duplicate ids fail fast. Use `unregisterOwner(owner)` during reloads or module shutdown.
 
+## Content Definitions
+
+Package: `dev.willram.ramcore.content` (and `content.spec`)
+
+Stability: experimental. Not Folia-thread-sensitive but does blocking file I/O; load off the main thread.
+
+`ContentLoader.load(root)` reads `content/<type>/*.yml|*.yaml|*.conf` into `ContentDefinition`s. Each entry has `id: ns:value`, an optional `extends: ns:parent`, then its type fields; a file holds one entry (a map with an `id`) or many (a top-level list). The type is the directory name. Inheritance deep-merges the parent node into the child: child scalar wins, child list replaces, maps merge. The loader never throws mid-load; it returns a `ContentLoadResult` with `definitions()` (cleanly loaded and merged) and `errors()` (every problem, each a `ValidationError(source, path, message)`). Missing parents, cycles, duplicate/missing ids, and parse failures are all collected. `throwIfErrors()` raises `ContentValidationException`.
+
+Deserialization produces pure, off-server specs rather than live objects. `SpecLoader` registers a `ContentDeserializer` per type and yields a `SpecLoadResult`:
+
+```java
+SpecLoadResult specs = SpecLoader.create()
+        .deserializer("items", ItemSpec::deserialize)
+        .deserializer("regions", RegionSpec::deserialize)
+        .deserializer("rewards", node -> RewardPlanSpec.deserialize(node, factories))
+        .load(dataFolder.toPath().resolve("content"))
+        .throwIfErrors();
+
+RuleRegion spawn = ContentRegistrar.toRuleRegion(id, specs.get(id, RegionSpec.class).orElseThrow());
+```
+
+Specs: `ItemSpec` (validates the `Material` key), `RegionSpec` (cuboid/sphere shape plus rules), `RewardPlanSpec`/`RewardEntrySpec` (each entry's `type` validated against a `RewardActionFactories` registry, so an unknown reward type is a load error). `RewardActionFactories.standard(economy)` provides `money`, `command`, `message` and `permission-node-check`; `item` is left to consumers because it needs a server. `ContentRegistrar` turns specs into live objects: `toRuleRegion` and `toRewardPlan` are pure; `toItemStack` needs a running server. Loot, NPC and display config-form specs are not implemented yet.
+
+`ValidationException` (package `exception`) is the shared base for `ConfigValidationException`, `TemplateValidationException` and `ContentValidationException`: `validationErrors()` gives the structured `ValidationError` list, `errors()` the single-line strings.
+
+The built-in command `/ramcore diagnostics validate <plugin> [subdir]` runs the loader off-thread against `plugins/<plugin>/<subdir|content>` and prints the definition count and any errors, with zero registration side-effects.
+
+Kotlin: `contentLoader(dir) { deserializer("items", ItemSpec::deserialize) }`, `contentLoad(dir)`.
+
 ## Templates
 
 Package: `dev.willram.ramcore.template`

@@ -14,6 +14,8 @@ import dev.willram.ramcore.commands.CommandSuggestions;
 import dev.willram.ramcore.commands.RamArguments;
 import dev.willram.ramcore.commands.RamCommands;
 import dev.willram.ramcore.commands.ResolvedCommandArgument;
+import dev.willram.ramcore.content.ContentLoadResult;
+import dev.willram.ramcore.content.ContentLoader;
 import dev.willram.ramcore.integration.IntegrationRegistry;
 import dev.willram.ramcore.integration.Integrations;
 import dev.willram.ramcore.item.nbt.ItemSnapshot;
@@ -57,6 +59,8 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
     private static final CommandArgument<Integer> RUNS = RamArguments.integer("runs", 1, 10);
     private static final CommandArgument<String> MESSAGE = RamArguments.greedyString("message");
     private static final CommandArgument<String> PROVIDER = RamArguments.word("provider");
+    private static final CommandArgument<String> VALIDATE_PLUGIN = RamArguments.word("plugin");
+    private static final CommandArgument<String> VALIDATE_SUBDIR = RamArguments.word("subdir");
     private static final ResolvedCommandArgument<List<Player>, PlayerSelectorArgumentResolver> PLAYER = RamArguments.player("player");
     private static final ResolvedCommandArgument<List<Entity>, EntitySelectorArgumentResolver> ENTITY = RamArguments.entity("entity");
 
@@ -261,7 +265,17 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
                                     DiagnosticProvider diagnosticProvider = this.diagnosticRegistry.provider(id)
                                             .orElseThrow(() -> context.fail("<red>Unknown diagnostic provider: <white>" + id + "</white>"));
                                     sendPlainLines(context, diagnosticProvider.lines());
-                                }))));
+                                })))
+                .literal("validate", validate -> validate
+                        .description("Load and validate a plugin's content tree without registering anything.")
+                        .argument(VALIDATE_PLUGIN, pluginArgument -> pluginArgument
+                                .description("Validate plugins/<plugin>/content off-thread.")
+                                .example("ramcore diagnostics validate MyPlugin")
+                                .executesAsync(context -> runValidate(context, context.get(VALIDATE_PLUGIN), "content"))
+                                .argument(VALIDATE_SUBDIR, subdirArgument -> subdirArgument
+                                        .description("Validate plugins/<plugin>/<subdir> off-thread.")
+                                        .example("ramcore diagnostics validate MyPlugin content")
+                                        .executesAsync(context -> runValidate(context, context.get(VALIDATE_PLUGIN), context.get(VALIDATE_SUBDIR)))))));
 
         spec.literal("inspect", inspect -> inspect
                 .description("Inspect selected runtime objects.")
@@ -304,6 +318,37 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
                         })));
 
         return spec;
+    }
+
+    private void runValidate(@NotNull CommandContext context, @NotNull String pluginName, @NotNull String subdir) throws CommandInterruptException {
+        if (isUnsafePathSegment(pluginName) || isUnsafePathSegment(subdir)) {
+            throw context.fail("<red>Invalid plugin or subdirectory name.");
+        }
+        java.nio.file.Path pluginsDir = this.plugin.getDataFolder().toPath().getParent();
+        if (pluginsDir == null) {
+            throw context.fail("<red>Could not resolve the plugins directory.");
+        }
+        java.nio.file.Path dir = pluginsDir.resolve(pluginName).resolve(subdir);
+
+        ContentLoadResult result = ContentLoader.load(dir);
+        List<String> lines = new ArrayList<>();
+        lines.add("Validating " + pluginName + "/" + subdir + " (" + dir + ")");
+        lines.add("Definitions loaded: " + result.definitions().size());
+        if (result.successful()) {
+            lines.add("No errors.");
+        } else {
+            lines.add("Errors (" + result.errors().size() + "):");
+            result.errors().forEach(error -> lines.add(" - " + error.describe()));
+        }
+        sendPlainLines(context, lines);
+    }
+
+    private static boolean isUnsafePathSegment(@NotNull String segment) {
+        return segment.isBlank()
+                || segment.contains("..")
+                || segment.contains("/")
+                || segment.contains("\\")
+                || segment.contains(":");
     }
 
     @NotNull

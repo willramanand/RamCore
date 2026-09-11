@@ -263,6 +263,8 @@ Tests: loader on `@TempDir` fixture trees (valid, missing parent, cycle, bad mat
 
 ---
 
+**Outcome (done 2026-09-10, three commits on `phase/b-roadmap-1x`).** PR1: `configurate-yaml` 4.1.2 added (shaded/relocated with snakeyaml, `error_prone_annotations` excluded; `Base64Util` moved off snakeyaml's removed Base64Coder); `ContentLoader.load` reads YAML/HOCON into `ContentDefinition`s with deep-merge inheritance and every-error-at-once collection; new `exception.ValidationException` base with `ValidationError(source, path, message)`, and `Config`/`Template`/`Content` validation exceptions extend it (`ConfigValidationException` no longer extends `ConfigException`, the one internal-compat cost). PR2: pure specs `ItemSpec`/`RegionSpec`/`RewardPlanSpec` with `ContentDeserializer`/`SpecLoader`, `RewardActionFactory`/`RewardActionFactories` (validate reward `type:`), and `ContentRegistrar` (pure `toRuleRegion`/`toRewardPlan`, server-only `toItemStack`). PR3: `/ramcore diagnostics validate <plugin> [subdir]` runs the loader `executesAsync` with path-segment sanitisation and zero side-effects. Deviations: inheritance validation is the loader's own pass (not the template registry) so errors carry a `SourceRef`; loot/NPC/display config-form specs deferred (documented). Deps resolved offline by adding the ExtendedClip repo id earlier and excluding an uncached transitive. 26 tests (11 loader, 4 spec, plus the exception retrofit stayed green); full suite 382.
+
 ## 7. Phase C — Engineering quality
 
 ### 2.2 Multi-module split (+ 2.1b `ramcore-test`) — **XL** (3 PRs)
