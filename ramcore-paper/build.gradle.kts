@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.gradleup.shadow:shadow-gradle-plugin:8.3.6")
+        classpath("com.gradleup.shadow:shadow-gradle-plugin:8.3.9")
         // ASM 9.8 reads Java 25 (class file major 69)
         classpath("org.ow2.asm:asm:9.8")
         classpath("org.ow2.asm:asm-commons:9.8")

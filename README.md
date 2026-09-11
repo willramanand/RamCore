@@ -22,13 +22,13 @@ RamCore tracks the current Paper major line only ([ADR-0001](docs/decisions/ADR-
 
 ## Building
 
-The build is Gradle (Kotlin DSL) and emits Java 25 bytecode ([ADR-0002](docs/decisions/ADR-0002-build-tool.md)). Gradle 8.8 runs on JDK 21 and compiles with a Java 25 toolchain, which it provisions automatically when no local JDK 25 is found.
+The build is Gradle 9.1 (Kotlin DSL) and emits Java 25 bytecode ([ADR-0002](docs/decisions/ADR-0002-build-tool.md)). Gradle 9.1 runs on JDK 25 directly (use JDK 25 as the Gradle JVM in your IDE); it compiles with a Java 25 toolchain, provisioned automatically when no local JDK 25 is found.
 
 ```sh
 ./gradlew build
 ```
 
-The shaded plugin jar is written to `ramcore-paper/build/libs/RamCore-<version>.jar`; it is a single relocated artifact identical in shape to the previous Maven output. Run all tests with `./gradlew test`. A live Paper/Folia smoke test remains a manual step (see [release readiness](docs/RELEASE_READINESS.md)).
+The shaded plugin jar is written to `ramcore-paper/build/libs/RamCore-<version>.jar`; it is a single relocated artifact identical in shape to the previous Maven output. Run all tests with `./gradlew test`. A live Paper/Folia smoke test remains a manual step (see [release readiness](RELEASE_READINESS.md) and [smoke test](docs/SMOKE_TEST.md)).
 
 ## Modules
 
