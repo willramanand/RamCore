@@ -15,6 +15,7 @@ import dev.willram.ramcore.dialogue.DialogueRegistry
 import dev.willram.ramcore.dialogue.DialogueSession
 import dev.willram.ramcore.kotlin.command
 import dev.willram.ramcore.kotlin.register
+import dev.willram.ramcore.kotlin.subcommand
 import dev.willram.ramcore.resourcepack.AssetSource
 import dev.willram.ramcore.resourcepack.ResourcePackAssetId
 import dev.willram.ramcore.resourcepack.ResourcePackBuilder
@@ -96,49 +97,48 @@ class SamplePlugin : RamPlugin() {
     }
 
     override fun registerCommands(commands: Commands) {
-        // NOTE: literal(name) { node -> ... } binds to the Java member CommandSpec.literal(String,
-        // Consumer<Node>) (Kotlin prefers members over the RamCoreKtx extension), so the executor must
-        // be set on the node PARAMETER, not the outer CommandSpec receiver.
+        // subcommand{} is the RamCoreKtx receiver-DSL: the block's receiver is the child node, so
+        // description()/executes{} land on the subcommand (not the root).
         val spec = command("sample") {
             description("RamCore example commands.")
             playerOnly()
-            literal("cast") { cast ->
-                cast.description("Cast the example ability.")
-                    .executes { context ->
-                        context.reply("<gray>" + abilityService.cast(context.requirePlayer(), STRIKE, AbilityTrigger.COMMAND).status())
-                    }
+            subcommand("cast") {
+                description("Cast the example ability.")
+                executes { context ->
+                    context.reply("<gray>" + abilityService.cast(context.requirePlayer(), STRIKE, AbilityTrigger.COMMAND).status())
+                }
             }
-            literal("talk") { talk ->
-                talk.description("Open the example dialogue.")
-                    .executes { context ->
-                        DialogueSession.chat(context.requirePlayer(), dialogues.require(GUIDE)).start()
-                    }
+            subcommand("talk") {
+                description("Open the example dialogue.")
+                executes { context ->
+                    DialogueSession.chat(context.requirePlayer(), dialogues.require(GUIDE)).start()
+                }
             }
-            literal("dungeon") { dungeon ->
-                dungeon.description("Create an instanced dungeon world.")
-                    .executes { context ->
-                        context.reply("<gray>Creating dungeon...")
-                        worldInstances.create("dungeon", WorldInstanceOptions.defaults())
-                            .thenApply(TaskContext.global()) { instance ->
-                                context.reply("<green>Dungeon ready: <white>" + instance.name())
-                                instance
-                            }
-                    }
-            }
-            literal("pack") { pack ->
-                pack.description("Build the example resource pack.")
-                    .executesAsync { context ->
-                        try {
-                            val report = ResourcePackBuilder.create()
-                                .name("Sample Pack")
-                                .minecraftVersion("1.21.4")
-                                .item(RUBY_ITEM, AssetSource.ofString("<png-bytes>"))
-                                .buildTo(dataFolder.toPath().resolve("pack.zip"))
-                            context.reply("<green>Built pack, sha1=<white>" + report.sha1Hex())
-                        } catch (failure: Exception) {
-                            context.reply("<red>Pack build failed: <white>" + failure.message)
+            subcommand("dungeon") {
+                description("Create an instanced dungeon world.")
+                executes { context ->
+                    context.reply("<gray>Creating dungeon...")
+                    worldInstances.create("dungeon", WorldInstanceOptions.defaults())
+                        .thenApply(TaskContext.global()) { instance ->
+                            context.reply("<green>Dungeon ready: <white>" + instance.name())
+                            instance
                         }
+                }
+            }
+            subcommand("pack") {
+                description("Build the example resource pack.")
+                executesAsync { context ->
+                    try {
+                        val report = ResourcePackBuilder.create()
+                            .name("Sample Pack")
+                            .minecraftVersion("1.21.4")
+                            .item(RUBY_ITEM, AssetSource.ofString("<png-bytes>"))
+                            .buildTo(dataFolder.toPath().resolve("pack.zip"))
+                        context.reply("<green>Built pack, sha1=<white>" + report.sha1Hex())
+                    } catch (failure: Exception) {
+                        context.reply("<red>Pack build failed: <white>" + failure.message)
                     }
+                }
             }
         }
         commands.register(spec)

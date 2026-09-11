@@ -134,17 +134,17 @@ fun Commands.register(vararg specs: CommandSpec): Set<String> =
 fun Commands.register(vararg modules: CommandModule): Set<String> =
     RamCommands.register(this, *modules)
 
-fun CommandSpec.literal(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec {
+fun CommandSpec.subcommand(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec {
     literal(name).configure()
     return this
 }
 
-fun <T : Any> CommandSpec.argument(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec {
+fun <T : Any> CommandSpec.arg(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec {
     argument(argument).configure()
     return this
 }
 
-fun <T : Any, R : ArgumentResolver<T>> CommandSpec.argument(
+fun <T : Any, R : ArgumentResolver<T>> CommandSpec.arg(
     argument: ResolvedCommandArgument<T, R>,
     configure: CommandSpec.Node.() -> Unit
 ): CommandSpec {
@@ -152,17 +152,17 @@ fun <T : Any, R : ArgumentResolver<T>> CommandSpec.argument(
     return this
 }
 
-fun CommandSpec.Node.literal(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
+fun CommandSpec.Node.subcommand(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
     literal(name).configure()
     return this
 }
 
-fun <T : Any> CommandSpec.Node.argument(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
+fun <T : Any> CommandSpec.Node.arg(argument: CommandArgument<T>, configure: CommandSpec.Node.() -> Unit): CommandSpec.Node {
     argument(argument).configure()
     return this
 }
 
-fun <T : Any, R : ArgumentResolver<T>> CommandSpec.Node.argument(
+fun <T : Any, R : ArgumentResolver<T>> CommandSpec.Node.arg(
     argument: ResolvedCommandArgument<T, R>,
     configure: CommandSpec.Node.() -> Unit
 ): CommandSpec.Node {
