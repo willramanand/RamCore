@@ -44,4 +44,20 @@ public final class AbilityTargetsTest {
         assertThrows(RuntimeException.class, () -> AbilityTargets.radius(0.0D));
         assertThrows(RuntimeException.class, () -> AbilityTargets.nearest(-1.0D));
     }
+
+    @Test
+    public void aimTargetersRejectNonPositiveArgs() {
+        assertThrows(RuntimeException.class, () -> AbilityTargets.rayTrace(0.0D, 0.3D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.rayTrace(10.0D, 0.0D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.cone(-1.0D, 30.0D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.beam(10.0D, 0.0D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.groundRadius(10.0D, 0.0D));
+    }
+
+    @Test
+    public void coneRejectsAngleOutOfRange() {
+        assertThrows(RuntimeException.class, () -> AbilityTargets.cone(10.0D, 0.0D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.cone(10.0D, 181.0D));
+        assertThrows(RuntimeException.class, () -> AbilityTargets.nearestInCone(10.0D, 181.0D));
+    }
 }

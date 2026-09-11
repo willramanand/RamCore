@@ -20,4 +20,7 @@ dependencies {
     }
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("com.zaxxer:HikariCP:6.3.0")
+
+    // pure API classes (e.g. ability geometry) are unit-tested against Paper types like Vector
+    testImplementation("io.papermc.paper:paper-api:$paperVersion")
 }
