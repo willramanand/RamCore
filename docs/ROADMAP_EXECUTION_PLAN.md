@@ -219,6 +219,8 @@ Tests with `FakeScheduler` + `InMemoryStore` + `FakeClock`: preload/join happy p
 
 Tests: fallback chain, resolver override, loader with `@TempDir` files, existing 3 tests unchanged. Stability: **stable** (additive to a stable package). Folia-safe.
 
+**Outcome (done 2026-09-10, one commit on `phase/b-roadmap-1x`).** Landed as designed. `LocaleResolver` is its own file with `byPlayerLocale(default)` and `fixed(locale)` factories. `MessageCatalog.Builder.message`/`messages` feed the default locale and win over a `locale(defaultLocale, ..)` set; `locale(locale, map)` merges. The loader returns a `MessageCatalogLoader.Bundle` record applied through `Builder.load(bundle)`; it keys templates by `MessageKey.of(id, template)`, which matches consumer constants because `MessageKey.equals` is id-only. `copyDefaults` takes explicit resource file names (varargs) rather than only the base name, since bundled locale files cannot be enumerated from the jar. `MessageLoadException` (a nested `RuntimeException`) reports unreadable files and unparseable locale tags. All three original catalog tests pass unchanged; 15 new tests cover the fallback chain, resolver override, the loader with `@TempDir`, and `copyDefaults` with a proxied `Plugin`.
+
 ### 1.4 Player text input — **L** (2 PRs)
 
 `dev.willram.ramcore.input`.

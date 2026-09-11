@@ -282,3 +282,22 @@ fun <T : Any> org.bukkit.entity.Player.data(service: dev.willram.ramcore.playerd
 /** Replaces the value and marks it dirty. */
 fun <T : Any> org.bukkit.entity.Player.setData(service: dev.willram.ramcore.playerdata.PlayerDataService, key: dev.willram.ramcore.playerdata.PlayerDataKey<T>, value: T) =
     service.set(this, key, value)
+
+// ---- message locales (task 1.3) ----
+
+/** Receiver for the [locale] DSL: `WELCOME to "Willkommen"` adds a template. */
+class LocaleMessagesScope {
+    val templates: MutableMap<MessageKey, String> = LinkedHashMap()
+
+    infix fun MessageKey.to(template: String) {
+        templates[this] = template
+    }
+}
+
+/** Adds a locale's templates: `messageCatalog { locale(Locale.GERMANY) { WELCOME to "..." } }`. */
+fun MessageCatalog.Builder.locale(locale: java.util.Locale, block: LocaleMessagesScope.() -> Unit): MessageCatalog.Builder =
+    locale(locale, LocaleMessagesScope().apply(block).templates)
+
+/** Loads a YAML message bundle from a directory (see MessageCatalogLoader). */
+fun messagesYaml(directory: java.nio.file.Path, baseName: String = "messages", defaultLocale: java.util.Locale = java.util.Locale.US): dev.willram.ramcore.message.MessageCatalogLoader.Bundle =
+    dev.willram.ramcore.message.MessageCatalogLoader.yaml(directory, baseName, defaultLocale)

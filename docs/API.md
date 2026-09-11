@@ -180,6 +180,28 @@ messages.send(player, WELCOME, Texts.context()
         .build());
 ```
 
+
+### Locales
+
+`MessageCatalog` renders per-locale templates. `Builder.message`/`messages` populate the default locale (`Locale.US` unless `Builder.defaultLocale` changes it); `Builder.locale(locale, map)` adds a translated set; `Builder.localeResolver(resolver)` overrides how an audience's locale is chosen (default: `Player.locale()` for players, the default locale otherwise).
+
+```java
+MessageCatalog catalog = MessageCatalog.builder()
+        .message(WELCOME, "<green>Welcome, <player>!")               // default locale (en_US)
+        .locale(Locale.GERMANY, Map.of(WELCOME, "Willkommen, <player>!"))
+        .build();
+
+catalog.send(player, WELCOME, MessagePlaceholders.parsed("player", player.getName())); // resolves player.locale()
+catalog.render(Locale.GERMANY, WELCOME, ...);                        // explicit locale
+catalog.render(WELCOME, ...);                                        // default locale
+```
+
+Lookup for a locale never throws and follows a fallback chain: exact locale, then language-only (`de_CH` to `de`), then the default locale, then `MessageKey.defaultTemplate()`, then the key id. With no locales registered every path collapses to the default locale, so `send`, `render` and `renderRaw` behave exactly as before this feature.
+
+`MessageCatalogLoader.yaml(dir[, baseName][, defaultLocale])` loads `<baseName>.yml` as the default locale and every `<baseName>_<tag>.yml` (for example `messages_de_DE.yml`, tag parsed with `Locale.forLanguageTag(tag.replace('_','-'))`) as a translated set; nested YAML keys flatten to dotted ids. Apply the result with `Builder.load(bundle)`. `MessageCatalogLoader.copyDefaults(plugin, dir, "messages.yml", "messages_de_DE.yml", ...)` copies bundled resources on first run, skipping files that already exist. Because `MessageKey` equality is by id, loaded templates match the `MessageKey` constants consumers pass to `render`.
+
+Kotlin: `messageCatalog { defaultLocale(Locale.US); locale(Locale.GERMANY) { WELCOME to "Willkommen, <player>!" } }`, `messagesYaml(dir)`.
+
 ## Text Formatting
 
 Package: `dev.willram.ramcore.text`
