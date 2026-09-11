@@ -180,6 +180,28 @@ messages.send(player, WELCOME, Texts.context()
         .build());
 ```
 
+
+### Locales
+
+`MessageCatalog` renders per-locale templates. `Builder.message`/`messages` populate the default locale (`Locale.US` unless `Builder.defaultLocale` changes it); `Builder.locale(locale, map)` adds a translated set; `Builder.localeResolver(resolver)` overrides how an audience's locale is chosen (default: `Player.locale()` for players, the default locale otherwise).
+
+```java
+MessageCatalog catalog = MessageCatalog.builder()
+        .message(WELCOME, "<green>Welcome, <player>!")               // default locale (en_US)
+        .locale(Locale.GERMANY, Map.of(WELCOME, "Willkommen, <player>!"))
+        .build();
+
+catalog.send(player, WELCOME, MessagePlaceholders.parsed("player", player.getName())); // resolves player.locale()
+catalog.render(Locale.GERMANY, WELCOME, ...);                        // explicit locale
+catalog.render(WELCOME, ...);                                        // default locale
+```
+
+Lookup for a locale never throws and follows a fallback chain: exact locale, then language-only (`de_CH` to `de`), then the default locale, then `MessageKey.defaultTemplate()`, then the key id. With no locales registered every path collapses to the default locale, so `send`, `render` and `renderRaw` behave exactly as before this feature.
+
+`MessageCatalogLoader.yaml(dir[, baseName][, defaultLocale])` loads `<baseName>.yml` as the default locale and every `<baseName>_<tag>.yml` (for example `messages_de_DE.yml`, tag parsed with `Locale.forLanguageTag(tag.replace('_','-'))`) as a translated set; nested YAML keys flatten to dotted ids. Apply the result with `Builder.load(bundle)`. `MessageCatalogLoader.copyDefaults(plugin, dir, "messages.yml", "messages_de_DE.yml", ...)` copies bundled resources on first run, skipping files that already exist. Because `MessageKey` equality is by id, loaded templates match the `MessageKey` constants consumers pass to `render`.
+
+Kotlin: `messageCatalog { defaultLocale(Locale.US); locale(Locale.GERMANY) { WELCOME to "Willkommen, <player>!" } }`, `messagesYaml(dir)`.
+
 ## Text Formatting
 
 Package: `dev.willram.ramcore.text`
@@ -263,6 +285,35 @@ ItemTemplate template = items.require(ContentId.parse("example:fire_sword"));
 
 Duplicate ids fail fast. Use `unregisterOwner(owner)` during reloads or module shutdown.
 
+## Content Definitions
+
+Package: `dev.willram.ramcore.content` (and `content.spec`)
+
+Stability: experimental. Not Folia-thread-sensitive but does blocking file I/O; load off the main thread.
+
+`ContentLoader.load(root)` reads `content/<type>/*.yml|*.yaml|*.conf` into `ContentDefinition`s. Each entry has `id: ns:value`, an optional `extends: ns:parent`, then its type fields; a file holds one entry (a map with an `id`) or many (a top-level list). The type is the directory name. Inheritance deep-merges the parent node into the child: child scalar wins, child list replaces, maps merge. The loader never throws mid-load; it returns a `ContentLoadResult` with `definitions()` (cleanly loaded and merged) and `errors()` (every problem, each a `ValidationError(source, path, message)`). Missing parents, cycles, duplicate/missing ids, and parse failures are all collected. `throwIfErrors()` raises `ContentValidationException`.
+
+Deserialization produces pure, off-server specs rather than live objects. `SpecLoader` registers a `ContentDeserializer` per type and yields a `SpecLoadResult`:
+
+```java
+SpecLoadResult specs = SpecLoader.create()
+        .deserializer("items", ItemSpec::deserialize)
+        .deserializer("regions", RegionSpec::deserialize)
+        .deserializer("rewards", node -> RewardPlanSpec.deserialize(node, factories))
+        .load(dataFolder.toPath().resolve("content"))
+        .throwIfErrors();
+
+RuleRegion spawn = ContentRegistrar.toRuleRegion(id, specs.get(id, RegionSpec.class).orElseThrow());
+```
+
+Specs: `ItemSpec` (validates the `Material` key), `RegionSpec` (cuboid/sphere shape plus rules), `RewardPlanSpec`/`RewardEntrySpec` (each entry's `type` validated against a `RewardActionFactories` registry, so an unknown reward type is a load error). `RewardActionFactories.standard(economy)` provides `money`, `command`, `message` and `permission-node-check`; `item` is left to consumers because it needs a server. `ContentRegistrar` turns specs into live objects: `toRuleRegion` and `toRewardPlan` are pure; `toItemStack` needs a running server. Loot, NPC and display config-form specs are not implemented yet.
+
+`ValidationException` (package `exception`) is the shared base for `ConfigValidationException`, `TemplateValidationException` and `ContentValidationException`: `validationErrors()` gives the structured `ValidationError` list, `errors()` the single-line strings.
+
+The built-in command `/ramcore diagnostics validate <plugin> [subdir]` runs the loader off-thread against `plugins/<plugin>/<subdir|content>` and prints the definition count and any errors, with zero registration side-effects.
+
+Kotlin: `contentLoader(dir) { deserializer("items", ItemSpec::deserialize) }`, `contentLoad(dir)`.
+
 ## Templates
 
 Package: `dev.willram.ramcore.template`
@@ -327,6 +378,9 @@ if (decision.denied()) {
 Rules can be conditional with `rule.when(query -> ...)`. Region priority is applied before rule priority when regions overlap.
 
 ## Rewards
+
+Concrete actions live in `RewardActions`: `money(economy, amount)`, `command(line)` (`%player%` substituted), `message(component)`, `item(stack)`, `permissionCheck(node)`. `RewardSubjects.playerId(context)` / `onlinePlayer(context)` resolve a `UUID`, `OfflinePlayer` or `Player` subject. The `Rewards` facade exposes `engine()` and `plan()`.
+
 
 Package: `dev.willram.ramcore.reward`
 
@@ -803,6 +857,44 @@ integrations.register(new DetectedIntegrationProvider(descriptor, new BukkitPlug
 ```
 
 Use `Integrations.standard(detector)` in tests or custom bootstrap code when Bukkit's plugin manager should not be accessed directly.
+
+## Economy
+
+Package: `dev.willram.ramcore.economy`
+
+Stability: stable for `Economy`/`InMemoryEconomy`; `VaultEconomy` experimental. Threading: `InMemoryEconomy` is thread-safe; a Vault-backed economy runs on the main thread and does not hop, so callers choose the context.
+
+`Economy` is a minimal per-`UUID` abstraction: `balance`, `has`, `withdraw`, `deposit` (returning `EconomyResult(success, newBalance, message)`), `format`, `currencyName(plural)`. `Economies.inMemory()` returns a thread-safe map-backed economy that never goes negative. `Economies.detect(registry)` returns a Vault-backed economy only when the integration registry reports Vault available and a provider is registered; `net.milkbowl` classes are not touched otherwise, so it is safe to call when Vault is absent.
+
+```java
+Economy economy = Economies.detect(Integrations.standard()).orElseGet(Economies::inMemory);
+if (economy.withdraw(player, 50).success()) { ... }
+```
+
+## Placeholders
+
+Package: `dev.willram.ramcore.placeholder`
+
+Stability: stable for the abstractions; the PlaceholderAPI bridge is experimental.
+
+`PlaceholderProvider { String id(); @Nullable String resolve(OfflinePlayer, String params); }`. `PlaceholderRegistry` resolves a key of the form `<id>_<params>` and bridges every provider into MiniMessage via `tagResolver(player)` (so `<ramcore:'party_size'>` resolves through the `ramcore` provider). `PlaceholderApiBridge.register(integrations, registry, author, version)` registers one `PlaceholderExpansion` per provider when PlaceholderAPI is present, and returns 0 (touching no `me.clip` classes) when it is absent.
+
+Built-ins are opt-in because RamCore holds no gameplay instances:
+
+```java
+PlaceholderProvider ramcore = RamCorePlaceholders.builder()
+        .parties(partyManager)
+        .cooldowns("combat", combatTracker)   // CooldownTracker<String>
+        .objectives(objectiveTracker)
+        .regions(regionEngine)
+        .build();                              // provider id "ramcore"
+```
+
+Params: `party_size`, `party_leader`, `cooldown_<name>_<key>` (remaining seconds), `objective_<namespace:value>_<task>` (current amount), `region` (highest-priority region id at the player's location). Unwired or unknown params resolve to null.
+
+## Region Tracking
+
+`RegionTracker` (package `dev.willram.ramcore.region`) tracks which `RuleRegion`s each player stands in and fires `RegionEnterEvent`/`RegionExitEvent` on transitions. Register it as a listener and bind it; it watches move (block-change only), teleport, world change, join and quit. `RegionRuleEngine.regionsAt(position)` lists containing regions highest-priority first, and `region(id)` looks one up. The transition logic (`transition(playerId, player, position)`, `clear(playerId, player)`) is separable from Bukkit wiring, so it is tested directly with positions and a custom `TransitionHandler`. Folia: the move event runs on the player's region; the current sets live in a concurrent map.
 
 ## Commands
 
@@ -1660,6 +1752,37 @@ rewards.open(player);
 
 `ITEM_DATA_COMPONENTS` is reported as partial Paper API support through `ItemComponents.registerPaperCapability(...)`. `ITEM_NBT` is reported as partial Paper API support through `ItemNbt.registerPaperCapability(...)`: Bukkit/Paper exposes safe binary item serialization and structured meta/PDC/component inspection, but raw SNBT import/export requires a guarded NMS adapter. The component API is experimental in Paper, so consuming plugins should prefer RamCore patches/profiles over direct `ItemStack#setData(...)` calls when they need a stable boundary.
 
+## Player Input
+
+Package: `dev.willram.ramcore.input`
+
+Stability: **experimental** for `CHAT` and `ANVIL`; `SIGN` is **Paper-experimental** and currently falls back to `CHAT`. Folia: chat arrives on an async thread; every promise completes on the player's scheduler, so continuations may touch the player.
+
+`PlayerInput` asks a player for text and returns a `Promise`. Install the listener once, then request:
+
+```java
+PlayerInput.install(this);   // in RamPlugin.enable(): wires chat/inventory/quit events
+
+PlayerInput.request(player, InputRequest.builder()
+        .prompt(Component.text("Type a name, or 'cancel':"))
+        .timeout(20 * 30)                 // ticks; 0 waits forever
+        .retries(2)
+        .validator(s -> !s.isBlank(), Component.text("Cannot be blank"))
+        .build())
+    .thenAcceptSync(name -> ...)
+    .exceptionallySync(error -> ...);     // InputCancelledException: CANCELLED, TIMEOUT, QUIT, EXHAUSTED, SUPERSEDED, OFFLINE
+```
+
+`request(player, request, InputParser<T>)` parses the text into `T`; a thrown parser exception is a failed attempt and consumes a retry, exactly like a failed validator. `InputRequest.Builder`: `prompt`, `timeout(ticks)`, `cancelWord` (default `cancel`, case-insensitive and trimmed; empty disables it), `retries` (default 0, i.e. one attempt), `validator(predicate, error)`, `backend(InputBackend)`.
+
+`InputSessionRegistry` keeps one active request per player: a new request supersedes the previous (which fails `SUPERSEDED`), and a quit cancels (`QUIT`). Its event-handling methods (`onChat`, `onAnvilClick`, `onInventoryClose`, `onQuit`) are what `InputListener` calls, and what tests call directly with constructed events, so the registry never registers Bukkit listeners itself.
+
+Backends: `CHAT` subscribes at `LOWEST`, captures the plain text and cancels the event, so the message never reaches other chat listeners. `ANVIL` opens an anvil and reads its rename field on a result-slot click. `SIGN` needs virtual-sign packet support that is not wired yet and logs a fallback to `CHAT`.
+
+`MenuSession.suspend(InputRequest)` closes the menu (skipping its close handler), runs the request, then reopens a fresh inventory for the same view with `MenuState` preserved; it returns the input result and reopens whether the input succeeds, cancels or times out.
+
+Kotlin: `player.askText { prompt(msg); timeout(200) }`, `player.askText(parser) { ... }`, `inputRequest { ... }`.
+
 ## World And Blocks
 
 Package: `dev.willram.ramcore.world`
@@ -1885,7 +2008,84 @@ public final class ExampleValue implements GsonSerializable {
 
 Use `GsonProvider.standard()` for normal serialization and `GsonProvider.prettyPrinting()` for human-readable output.
 
+## Stores
+
+Package: `dev.willram.ramcore.store` (and `store.sql`)
+
+Stability: `Store`, `CachedStore`, `InMemoryStore`, `FileStore`, migrations and codecs are **stable**; `SqlStore` is **experimental** (SQLite is exercised in tests, MySQL/MariaDB/PostgreSQL only at the SQL-string level). Folia: safe by design. Every method returns a `Promise` completed on the async scheduler; pick a `TaskContext` for continuations that touch server state.
+
+A `Store<K, V>` is a keyed async transport: `load`, `save`, `delete`, `loadAll`, `keys`. Backends never track what changed; wrap one in a `CachedStore` for an in-memory working set with dirty tracking:
+
+```java
+CachedStore<UUID, Profile> profiles = Stores.cached(Stores.jsonByUuid(dataFolder.resolve("profiles"), Profile.class));
+bind(profiles);                                  // close() flushes dirty entries on disable (bounded, 30s)
+
+profiles.load(uuid).thenAccept(TaskContext.of(player), loaded -> greet(player, profiles.require(uuid)));
+profiles.put(uuid, profile);                     // cache + dirty, no I/O
+profiles.saveDirty();                            // writes only dirty keys
+```
+
+Backends: `Stores.inMemory()` (synchronous, the default everywhere), `Stores.file(dir, keyCodec, codec)` / `jsonByUuid` / `jsonByString` (one atomically written file per key), `Stores.sql(SqlStoreConfig, table, keyCodec, codec)` (HikariCP pool) or `Stores.sql(ConnectionProvider, dialect, ..)` for a custom or unpooled connection. Operations on one key run in submission order; different keys may interleave.
+
+Values are stored as `StoredRecord(dataVersion, value)`. Register `StoreMigrations` on the backend and old records are upgraded on load and written back:
+
+```java
+StoreMigrations<Profile> migrations = StoreMigrations.<Profile>start()
+        .to(2, (profile, from) -> profile.withLevel(profile.level() + 100))
+        .to(3, (profile, from) -> profile.withName(profile.name().toUpperCase()));
+FileStore<UUID, Profile> store = Stores.file(dir, DataKeyCodec.uuidKeys(), StoreCodec.gson(Profile.class), migrations);
+```
+
+Codecs: `StoreCodec.gson(type)` writes a `{"version", "data"}` envelope; `StoreCodec.dataItem(type)` writes raw JSON with the item's own `dataVersion` field and reads files produced by the deprecated `FileDataRepository`.
+
+SQL: `SqlStoreConfig.sqlite(path)` or `SqlStoreConfig.of(jdbcUrl, user, password)`; `SqlStoreConfig.configKeys("storage.sql")` registers `url`, `username`, `password`, `pool-size` with `BukkitConfig`, and `fromConfig` reads them back. HikariCP and the JDBC driver are resolved at runtime by the plugin loader (ADR-0003); `Stores.sql(config, ..)` throws an `ApiMisuseException` naming the fix when they are absent. Servers without internet access must place the resolved libraries in Paper's `libraries/` directory.
+
+Domain stores wire the same contract into gameplay state. Each defaults to in-memory, so behaviour without persistence is unchanged; each exposes `load()` to restore on startup and writes through on every change:
+
+- `PartyStore` with `PartyManager.create(options, clock, store)`: leader and member roles persist; invites, metadata and contributions do not.
+- `CooldownStore<K>` with `CooldownTracker.create(base, store)`: consumed cooldowns persist and elapsed ones are dropped on load. `CooldownKey.keyCodec()` exists for file/SQL backends.
+- `ObjectiveProgressStore` with `ObjectiveTracker.create(store)`: task amounts persist per `ObjectiveProgressKey(subject, objectiveId)`.
+- `InstancedLoot.persistentStore(store, LootPayloadCodec)`: a `LootInstanceStore` that writes claims, rerolls and removals through. Reward payloads are `Object`, so the consumer supplies the payload codec; `LootPayloadCodec.strings()` covers string payloads and rejects anything else at save time.
+
+Testing: `StoreContractTest` in `src/test` runs the same cases against every backend; `FakeScheduler.runAll()` drives async backends.
+
+## Player Data
+
+Package: `dev.willram.ramcore.playerdata`
+
+Stability: **experimental** (stable once an example consumer has used it). Folia: safe by design. Loads run on the async scheduler, values are read and written on the player's thread, and every save copies the value on the player's scheduler before the async write.
+
+`PlayerDataService` loads per-player values before the player joins, hands them out synchronously while the player is online, and writes them back on quit, on an autosave timer, and at shutdown. Each value has a `PlayerDataKey<T>(id, type, defaultFactory, snapshot)` and is persisted through any `Store<UUID, T>` from the Stores section.
+
+```java
+static final PlayerDataKey<Profile> PROFILE = PlayerDataKey.of("profile", Profile.class, Profile::new, Profile::copy);
+
+@Override
+public void load() {                                   // install from load(): the service registry closes after it
+    PlayerDataService data = PlayerDataService.install(this, PlayerDataOptions.defaults());
+    data.register(PROFILE, Stores.cached(Stores.jsonByUuid(getDataFolder().toPath().resolve("profiles"), Profile.class)));
+}
+
+// on the player's thread, after join
+PlayerDataService data = services().require(PlayerDataService.KEY);
+Profile profile = data.require(player, PROFILE);
+profile.level++;
+data.markDirty(player, PROFILE);                       // or data.set(player, PROFILE, newProfile) for immutable values
+```
+
+Lifecycle, driven by `PlayerDataListener` (registered by `install`): `AsyncPlayerPreLoginEvent` at `MONITOR` starts `preload(uuid)` for every key; a disallowed `PlayerLoginEvent` calls `cancelPending`; `PlayerJoinEvent` at `LOWEST` promotes the loaded values or applies the `JoinPolicy`; `PlayerQuitEvent` at `MONITOR` saves dirty keys inline and evicts. Pending entries that never join are swept after four load timeouts.
+
+`PlayerDataOptions(joinPolicy, loadTimeout, autosaveInterval, kickMessage, flushTimeout)` with `withX` copies. `JoinPolicy.KICK` (default) kicks a player whose data has not arrived `loadTimeout` after the join; `JoinPolicy.DEFER` lets them in and `get` returns empty until `whenReady(player)` completes. There is no blocking policy: the join runs on the region thread on Folia. Keys registered after players are online are loaded for them immediately. Load failures are logged; under `KICK` the player is kicked, under `DEFER` `whenReady` fails.
+
+Threading rule for values: `T` is only touched on the player's thread. `markDirty` announces an in-place mutation; the snapshot function (`Profile::copy` above) runs on the player's scheduler and the copy is what the store writes, so `T` need not be thread-safe. Keys created without a snapshot function pass the value through unchanged, which is right for immutable records replaced with `set`. `quit` and shutdown copy inline because they already own the player or the server is single-threaded. `saveDirty()` writes only dirty keys; `saveAll()` writes everything and is what `disable` runs with a bounded wait, logging any key that did not flush.
+
+Testing: `PlayerDataService.create(options, clock)` has no plugin and no listener, so tests call `preload`, `join(player)` and `quit` directly with a `ProxyFakes` player under `FakeScheduler`. Entity-anchored work (snapshots, kicks) lands one tick later, so drive it with `tick()` before `runAll()`.
+
+Kotlin: `playerDataKey<Profile>("profile") { Profile() }`, `playerDataKey<Profile>("profile", { Profile() }, Profile::copy)`, `player.data(service, key)`, `player.setData(service, key, value)`.
+
 ## Repositories And Data Items
+
+Deprecated since 2.1 in favour of [Stores](#stores). Kept working; `FileDataRepository` shares its atomic file writer with `FileStore` and the two read each other's files through `StoreCodec.dataItem`.
 
 Package: `dev.willram.ramcore.data`
 

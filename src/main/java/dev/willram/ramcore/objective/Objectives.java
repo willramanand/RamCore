@@ -14,6 +14,11 @@ public final class Objectives {
     }
 
     @NotNull
+    public static ObjectiveTracker tracker(@NotNull ObjectiveProgressStore store) {
+        return ObjectiveTracker.create(store);
+    }
+
+    @NotNull
     public static ObjectiveDefinition.Builder objective(@NotNull ContentId id) {
         return ObjectiveDefinition.builder(id);
     }

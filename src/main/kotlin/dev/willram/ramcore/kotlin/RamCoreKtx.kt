@@ -238,3 +238,108 @@ fun integrationRegistry(): IntegrationRegistry = Integrations.registry()
 fun standardIntegrations(): IntegrationRegistry = Integrations.standard()
 
 fun standardIntegrations(detector: PluginDetector): IntegrationRegistry = Integrations.standard(detector)
+
+// ---- stores (task 1.1) ----
+
+fun <K : Any, V : Any> inMemoryStore(): dev.willram.ramcore.store.InMemoryStore<K, V> =
+    dev.willram.ramcore.store.Stores.inMemory()
+
+fun <K : Any, V : Any> dev.willram.ramcore.store.Store<K, V>.cached(): dev.willram.ramcore.store.CachedStore<K, V> =
+    dev.willram.ramcore.store.Stores.cached(this)
+
+inline fun <reified V : Any> jsonStoreByUuid(directory: java.nio.file.Path): dev.willram.ramcore.store.FileStore<java.util.UUID, V> =
+    dev.willram.ramcore.store.Stores.jsonByUuid(directory, V::class.java)
+
+inline fun <reified V : Any> jsonStoreByString(directory: java.nio.file.Path): dev.willram.ramcore.store.FileStore<String, V> =
+    dev.willram.ramcore.store.Stores.jsonByString(directory, V::class.java)
+
+fun <V : Any> migrations(configure: dev.willram.ramcore.store.StoreMigrations<V>.() -> dev.willram.ramcore.store.StoreMigrations<V>): dev.willram.ramcore.store.StoreMigrations<V> =
+    dev.willram.ramcore.store.StoreMigrations.start<V>().configure()
+
+fun partyManager(options: PartyOptions, store: dev.willram.ramcore.party.PartyStore): PartyManager =
+    PartyManager.create(options, java.time.Clock.systemUTC(), store)
+
+fun objectiveTracker(store: dev.willram.ramcore.objective.ObjectiveProgressStore): ObjectiveTracker =
+    ObjectiveTracker.create(store)
+
+// ---- player data (task 1.2) ----
+
+/** A [dev.willram.ramcore.playerdata.PlayerDataKey] whose values are handed to the async writer as-is (immutable values). */
+inline fun <reified T : Any> playerDataKey(id: String, noinline default: () -> T): dev.willram.ramcore.playerdata.PlayerDataKey<T> =
+    dev.willram.ramcore.playerdata.PlayerDataKey.of(id, T::class.java, default)
+
+/** A [dev.willram.ramcore.playerdata.PlayerDataKey] whose values are copied on the player's thread before every async save. */
+inline fun <reified T : Any> playerDataKey(id: String, noinline default: () -> T, noinline snapshot: (T) -> T): dev.willram.ramcore.playerdata.PlayerDataKey<T> =
+    dev.willram.ramcore.playerdata.PlayerDataKey.of(id, T::class.java, default, snapshot)
+
+fun playerDataOptions(configure: dev.willram.ramcore.playerdata.PlayerDataOptions.() -> dev.willram.ramcore.playerdata.PlayerDataOptions = { this }): dev.willram.ramcore.playerdata.PlayerDataOptions =
+    dev.willram.ramcore.playerdata.PlayerDataOptions.defaults().configure()
+
+/** The loaded value for this player, or null before the load completes (see [dev.willram.ramcore.playerdata.JoinPolicy.DEFER]). */
+fun <T : Any> org.bukkit.entity.Player.data(service: dev.willram.ramcore.playerdata.PlayerDataService, key: dev.willram.ramcore.playerdata.PlayerDataKey<T>): T? =
+    service.get(this, key).orElse(null)
+
+/** Replaces the value and marks it dirty. */
+fun <T : Any> org.bukkit.entity.Player.setData(service: dev.willram.ramcore.playerdata.PlayerDataService, key: dev.willram.ramcore.playerdata.PlayerDataKey<T>, value: T) =
+    service.set(this, key, value)
+
+// ---- message locales (task 1.3) ----
+
+/** Receiver for the [locale] DSL: `WELCOME to "Willkommen"` adds a template. */
+class LocaleMessagesScope {
+    val templates: MutableMap<MessageKey, String> = LinkedHashMap()
+
+    infix fun MessageKey.to(template: String) {
+        templates[this] = template
+    }
+}
+
+/** Adds a locale's templates: `messageCatalog { locale(Locale.GERMANY) { WELCOME to "..." } }`. */
+fun MessageCatalog.Builder.locale(locale: java.util.Locale, block: LocaleMessagesScope.() -> Unit): MessageCatalog.Builder =
+    locale(locale, LocaleMessagesScope().apply(block).templates)
+
+/** Loads a YAML message bundle from a directory (see MessageCatalogLoader). */
+fun messagesYaml(directory: java.nio.file.Path, baseName: String = "messages", defaultLocale: java.util.Locale = java.util.Locale.US): dev.willram.ramcore.message.MessageCatalogLoader.Bundle =
+    dev.willram.ramcore.message.MessageCatalogLoader.yaml(directory, baseName, defaultLocale)
+
+// ---- player input (task 1.4) ----
+
+fun inputRequest(configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit): dev.willram.ramcore.input.InputRequest =
+    dev.willram.ramcore.input.InputRequest.builder().apply(configure).build()
+
+/** Asks this player for text: `player.askText { prompt(msg); timeout(200) }`. */
+fun org.bukkit.entity.Player.askText(configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit = {}): dev.willram.ramcore.promise.Promise<String> =
+    dev.willram.ramcore.input.PlayerInput.request(this, inputRequest(configure))
+
+/** Asks this player for text and parses it; a parse failure consumes a retry. */
+fun <T : Any> org.bukkit.entity.Player.askText(parser: dev.willram.ramcore.input.InputParser<T>, configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit = {}): dev.willram.ramcore.promise.Promise<T> =
+    dev.willram.ramcore.input.PlayerInput.request(this, inputRequest(configure), parser)
+
+// ---- economy, rewards, placeholders (task 1.5) ----
+
+fun inMemoryEconomy(): dev.willram.ramcore.economy.Economy =
+    dev.willram.ramcore.economy.Economies.inMemory()
+
+fun detectEconomy(registry: dev.willram.ramcore.integration.IntegrationRegistry): dev.willram.ramcore.economy.Economy? =
+    dev.willram.ramcore.economy.Economies.detect(registry).orElse(null)
+
+fun rewardPlan(configure: dev.willram.ramcore.reward.RewardPlan.Builder.() -> Unit): dev.willram.ramcore.reward.RewardPlan =
+    dev.willram.ramcore.reward.RewardPlan.builder().apply(configure).build()
+
+fun placeholderRegistry(configure: dev.willram.ramcore.placeholder.PlaceholderRegistry.() -> Unit = {}): dev.willram.ramcore.placeholder.PlaceholderRegistry =
+    dev.willram.ramcore.placeholder.PlaceholderRegistry.create().apply(configure)
+
+fun ramCorePlaceholders(configure: dev.willram.ramcore.placeholder.RamCorePlaceholders.Builder.() -> Unit): dev.willram.ramcore.placeholder.PlaceholderProvider =
+    dev.willram.ramcore.placeholder.RamCorePlaceholders.builder().apply(configure).build()
+
+fun regionTracker(engine: dev.willram.ramcore.region.RegionRuleEngine): dev.willram.ramcore.region.RegionTracker =
+    dev.willram.ramcore.region.RegionTracker.create(engine)
+
+// ---- content definitions (task 1.6) ----
+
+fun contentLoad(root: java.nio.file.Path): dev.willram.ramcore.content.ContentLoadResult =
+    dev.willram.ramcore.content.ContentLoader.load(root)
+
+/** Builds a SpecLoader and loads a directory: `contentLoader(dir) { deserializer("items", ItemSpec::deserialize) }`. */
+fun contentLoader(root: java.nio.file.Path, configure: dev.willram.ramcore.content.SpecLoader.() -> Unit): dev.willram.ramcore.content.SpecLoadResult =
+    dev.willram.ramcore.content.SpecLoader.create().apply(configure).load(root)

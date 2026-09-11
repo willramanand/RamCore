@@ -1,15 +1,13 @@
 package dev.willram.ramcore.data;
 
+import dev.willram.ramcore.store.StoreFiles;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,7 +17,13 @@ import java.util.concurrent.Executor;
 
 /**
  * Simple JSON/file-backed repository with dirty tracking, migrations, and async save helpers.
+ *
+ * @deprecated since 2.1. Use {@code Stores.cached(Stores.file(directory, keyCodec, StoreCodec.dataItem(type)))}
+ * from {@code dev.willram.ramcore.store}: same on-disk format, async {@code Promise}-based API,
+ * per-key ordered writes, and migrations applied on load. This class keeps working and shares the
+ * atomic file writer with {@code FileStore}.
  */
+@Deprecated(since = "2.1")
 public class FileDataRepository<K, V extends DataItem> extends DataRepository<K, V> implements AutoCloseable {
     private static final String EXTENSION = ".json";
 
@@ -52,16 +56,11 @@ public class FileDataRepository<K, V extends DataItem> extends DataRepository<K,
         this.registry.clear();
         try {
             Files.createDirectories(this.directory);
-            try (var stream = Files.list(this.directory)) {
-                for (Path path : stream
-                        .filter(Files::isRegularFile)
-                        .filter(file -> file.getFileName().toString().endsWith(EXTENSION))
-                        .toList()) {
-                    K key = this.keyCodec.decode(stripExtension(path.getFileName().toString()));
-                    V item = read(path);
-                    item = migrate(item);
-                    add(key, item);
-                }
+            for (String name : StoreFiles.listNames(this.directory, EXTENSION)) {
+                K key = this.keyCodec.decode(name);
+                V item = read(this.directory.resolve(name + EXTENSION));
+                item = migrate(item);
+                add(key, item);
             }
         } catch (IOException e) {
             throw new DataRepositoryException("failed to load repository from " + this.directory, e);
@@ -161,15 +160,7 @@ public class FileDataRepository<K, V extends DataItem> extends DataRepository<K,
     }
 
     private void write(Path path, V item) throws IOException {
-        Path temp = path.resolveSibling(path.getFileName() + ".tmp");
-        try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
-            this.serializer.write(writer, item);
-        }
-        try {
-            Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
-        }
+        StoreFiles.writeAtomically(path, writer -> this.serializer.write(writer, item));
     }
 
     private V migrate(V item) {
@@ -184,7 +175,4 @@ public class FileDataRepository<K, V extends DataItem> extends DataRepository<K,
         return current;
     }
 
-    private static String stripExtension(String fileName) {
-        return fileName.substring(0, fileName.length() - EXTENSION.length());
-    }
 }

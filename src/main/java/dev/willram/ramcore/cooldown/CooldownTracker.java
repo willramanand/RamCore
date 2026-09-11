@@ -1,6 +1,8 @@
 package dev.willram.ramcore.cooldown;
 
+import dev.willram.ramcore.promise.Promise;
 import dev.willram.ramcore.time.Time;
+import dev.willram.ramcore.utils.RamLog;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -18,14 +20,80 @@ import java.util.concurrent.TimeUnit;
 public final class CooldownTracker<K> {
     private final CooldownMap<K> cooldowns;
     private final List<CooldownExpiryListener<K>> expiryListeners = new ArrayList<>();
+    private final CooldownStore<K> store;
 
-    private CooldownTracker(@NotNull Cooldown base) {
+    private CooldownTracker(@NotNull Cooldown base, @NotNull CooldownStore<K> store) {
         this.cooldowns = CooldownMap.create(Objects.requireNonNull(base, "base"));
+        this.store = Objects.requireNonNull(store, "store");
     }
 
     @NotNull
     public static <K> CooldownTracker<K> create(@NotNull Cooldown base) {
-        return new CooldownTracker<>(base);
+        return new CooldownTracker<>(base, CooldownStore.inMemory());
+    }
+
+    /**
+     * Creates a tracker that writes consumed cooldowns through to the store.
+     *
+     * @param base  the cooldown template
+     * @param store persistence; call {@link #load()} once after construction
+     * @param <K>   key type
+     * @return the tracker
+     */
+    @NotNull
+    public static <K> CooldownTracker<K> create(@NotNull Cooldown base, @NotNull CooldownStore<K> store) {
+        return new CooldownTracker<>(base, store);
+    }
+
+    /**
+     * The store this tracker persists to.
+     *
+     * @return the cooldown store
+     */
+    @NotNull
+    public CooldownStore<K> store() {
+        return this.store;
+    }
+
+    /**
+     * Restores persisted cooldowns that have not yet elapsed. Elapsed entries are deleted.
+     *
+     * @return number of cooldowns restored
+     */
+    @NotNull
+    public Promise<Integer> load() {
+        return Promise.wrapFuture(this.store.loadAll().toCompletableFuture().thenApply(this::restore));
+    }
+
+    private int restore(Map<K, CooldownSnapshot> snapshots) {
+        long now = Time.nowMillis();
+        int restored = 0;
+        for (Map.Entry<K, CooldownSnapshot> entry : snapshots.entrySet()) {
+            CooldownSnapshot snapshot = entry.getValue();
+            if (snapshot.expiredAt(now)) {
+                forget(entry.getKey());
+                continue;
+            }
+            Cooldown cooldown = base().copy();
+            cooldown.setLastTested(snapshot.lastTestedMillis());
+            this.cooldowns.put(entry.getKey(), cooldown);
+            restored++;
+        }
+        return restored;
+    }
+
+    private void persist(@NotNull K key, @NotNull Cooldown cooldown) {
+        this.store.save(key, CooldownSnapshot.of(cooldown)).exceptionallyAsync(error -> {
+            RamLog.warn("failed to persist cooldown " + key, error);
+            return null;
+        });
+    }
+
+    private void forget(@NotNull K key) {
+        this.store.delete(key).exceptionallyAsync(error -> {
+            RamLog.warn("failed to delete persisted cooldown " + key, error);
+            return null;
+        });
     }
 
     @NotNull
@@ -45,6 +113,7 @@ public final class CooldownTracker<K> {
         long now = Time.nowMillis();
         if (cooldown.testSilently()) {
             cooldown.setLastTested(now);
+            persist(key, cooldown);
             return CooldownResult.allowed(key, cooldown.getTimeout(), now);
         }
 
@@ -73,10 +142,12 @@ public final class CooldownTracker<K> {
 
     public void reset(@NotNull K key) {
         this.cooldowns.reset(Objects.requireNonNull(key, "key"));
+        persist(key, cooldown(key));
     }
 
     public void reset(@NotNull K key, long timeMillis) {
         this.cooldowns.setLastTested(Objects.requireNonNull(key, "key"), timeMillis);
+        persist(key, cooldown(key));
     }
 
     public long remainingMillis(@NotNull K key) {
@@ -117,10 +188,15 @@ public final class CooldownTracker<K> {
     }
 
     public boolean remove(@NotNull K key) {
-        return this.cooldowns.getAll().remove(Objects.requireNonNull(key, "key")) != null;
+        boolean removed = this.cooldowns.getAll().remove(Objects.requireNonNull(key, "key")) != null;
+        forget(key);
+        return removed;
     }
 
     public void clear() {
+        for (K key : Set.copyOf(this.cooldowns.getAll().keySet())) {
+            forget(key);
+        }
         this.cooldowns.getAll().clear();
     }
 

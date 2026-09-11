@@ -102,6 +102,17 @@ public final class PartyGroup {
         this.invites.remove(playerId);
     }
 
+    /** Rebuilds a party from persisted state: leader plus members, no invites or metadata. */
+    static PartyGroup restore(@NotNull PartySnapshot snapshot) {
+        PartyGroup party = new PartyGroup(snapshot.partyId(), snapshot.leader());
+        for (UUID member : snapshot.roles().keySet()) {
+            if (!member.equals(snapshot.leader())) {
+                party.members.put(member, PartyRole.MEMBER);
+            }
+        }
+        return party;
+    }
+
     void addMember(@NotNull UUID playerId) {
         this.members.put(playerId, PartyRole.MEMBER);
     }

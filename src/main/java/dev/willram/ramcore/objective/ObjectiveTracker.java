@@ -2,6 +2,8 @@ package dev.willram.ramcore.objective;
 
 import dev.willram.ramcore.content.ContentId;
 import dev.willram.ramcore.exception.RamPreconditions;
+import dev.willram.ramcore.promise.Promise;
+import dev.willram.ramcore.utils.RamLog;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -19,6 +21,76 @@ public final class ObjectiveTracker {
     private final Map<ContentId, ObjectiveDefinition> definitions = new LinkedHashMap<>();
     private final Map<ObjectiveSubject, Map<ContentId, ObjectiveProgress>> progress = new LinkedHashMap<>();
     private final List<ObjectiveProgressListener> listeners = new ArrayList<>();
+    private final ObjectiveProgressStore store;
+
+    public ObjectiveTracker() {
+        this(ObjectiveProgressStore.inMemory());
+    }
+
+    private ObjectiveTracker(@NotNull ObjectiveProgressStore store) {
+        this.store = requireNonNull(store, "store");
+    }
+
+    /**
+     * Creates a tracker that writes progress through to the store.
+     *
+     * @param store persistence; register definitions, then call {@link #load()} once
+     * @return the tracker
+     */
+    @NotNull
+    public static ObjectiveTracker create(@NotNull ObjectiveProgressStore store) {
+        return new ObjectiveTracker(store);
+    }
+
+    /**
+     * The store this tracker persists to.
+     *
+     * @return the progress store
+     */
+    @NotNull
+    public ObjectiveProgressStore store() {
+        return this.store;
+    }
+
+    /**
+     * Restores persisted progress for every registered objective. Entries for objectives that are
+     * not registered stay in the store untouched.
+     *
+     * @return number of progress entries restored
+     */
+    @NotNull
+    public Promise<Integer> load() {
+        return Promise.wrapFuture(this.store.loadAll().toCompletableFuture().thenApply(this::restore));
+    }
+
+    private int restore(Map<ObjectiveProgressKey, ObjectiveProgressSnapshot> snapshots) {
+        int restored = 0;
+        for (Map.Entry<ObjectiveProgressKey, ObjectiveProgressSnapshot> entry : snapshots.entrySet()) {
+            ObjectiveProgressKey key = entry.getKey();
+            if (!this.definitions.containsKey(key.objectiveId())) {
+                continue;
+            }
+            progress(key.subject(), key.objectiveId()).restore(entry.getValue().amounts());
+            restored++;
+        }
+        return restored;
+    }
+
+    private void persist(@NotNull ObjectiveProgress progress) {
+        ObjectiveProgressKey key = new ObjectiveProgressKey(progress.subject(), progress.objectiveId());
+        this.store.save(key, ObjectiveProgressSnapshot.of(progress)).exceptionallyAsync(error -> {
+            RamLog.warn("failed to persist objective progress " + key, error);
+            return null;
+        });
+    }
+
+    private void forget(@NotNull ObjectiveSubject subject, @NotNull ContentId objectiveId) {
+        ObjectiveProgressKey key = new ObjectiveProgressKey(subject, objectiveId);
+        this.store.delete(key).exceptionallyAsync(error -> {
+            RamLog.warn("failed to delete persisted objective progress " + key, error);
+            return null;
+        });
+    }
 
     @NotNull
     public ObjectiveTracker register(@NotNull ObjectiveDefinition definition) {
@@ -64,6 +136,7 @@ public final class ObjectiveTracker {
     public List<ObjectiveUpdate> apply(@NotNull ObjectiveEvent event) {
         requireNonNull(event, "event");
         List<ObjectiveUpdate> updates = new ArrayList<>();
+        List<ObjectiveProgress> touched = new ArrayList<>();
         for (ObjectiveDefinition definition : this.definitions.values()) {
             ObjectiveProgress objectiveProgress = progress(event.subject(), definition.id());
             if (objectiveProgress.completed(definition)) {
@@ -76,6 +149,9 @@ public final class ObjectiveTracker {
                 ObjectiveUpdate update = advance(definition, objectiveProgress, task, event);
                 if (update != null) {
                     updates.add(update);
+                    if (!touched.contains(objectiveProgress)) {
+                        touched.add(objectiveProgress);
+                    }
                     this.listeners.forEach(listener -> listener.progress(update));
                 }
                 if (definition.chained()) {
@@ -83,15 +159,20 @@ public final class ObjectiveTracker {
                 }
             }
         }
+        touched.forEach(this::persist);
         return List.copyOf(updates);
     }
 
     public void reset(@NotNull ObjectiveSubject subject, @NotNull ContentId objectiveId) {
         existingProgress(subject, objectiveId).ifPresent(ObjectiveProgress::reset);
+        forget(subject, objectiveId);
     }
 
     public void resetSubject(@NotNull ObjectiveSubject subject) {
-        this.progress.remove(requireNonNull(subject, "subject"));
+        Map<ContentId, ObjectiveProgress> removed = this.progress.remove(requireNonNull(subject, "subject"));
+        if (removed != null) {
+            removed.keySet().forEach(objectiveId -> forget(subject, objectiveId));
+        }
     }
 
     @NotNull

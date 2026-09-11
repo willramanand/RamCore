@@ -17,6 +17,16 @@ public final class Cooldowns {
     }
 
     @NotNull
+    public static <K> CooldownTracker<K> tracker(@NotNull Cooldown cooldown, @NotNull CooldownStore<K> store) {
+        return CooldownTracker.create(cooldown, store);
+    }
+
+    @NotNull
+    public static CooldownTracker<CooldownKey> grouped(@NotNull Cooldown cooldown, @NotNull CooldownStore<CooldownKey> store) {
+        return CooldownTracker.create(cooldown, store);
+    }
+
+    @NotNull
     public static CooldownTracker<CooldownKey> grouped(@NotNull Cooldown cooldown) {
         return CooldownTracker.create(cooldown);
     }

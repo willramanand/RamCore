@@ -60,6 +60,12 @@ public final class ObjectiveProgress {
         this.amounts.clear();
     }
 
+    /** Replaces the amounts with persisted values. */
+    void restore(@NotNull Map<String, Long> amounts) {
+        this.amounts.clear();
+        this.amounts.putAll(requireNonNull(amounts, "amounts"));
+    }
+
     long advance(@NotNull ObjectiveTask task, long amount) {
         requireNonNull(task, "task");
         long before = current(task.id());
