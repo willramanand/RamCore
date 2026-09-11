@@ -19,6 +19,8 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Economy | `economy` | Core (VaultEconomy is a Paper-module bridge) | Stable; VaultEconomy experimental | Vault provider runs main-thread; InMemoryEconomy thread-safe; net.milkbowl loaded only when Vault present. |
 | Placeholders | `placeholder` | Core (PlaceholderApiBridge is a Paper-module bridge) | Stable; bridge experimental | Resolution is pure; me.clip loaded only when PlaceholderAPI present. |
 | Content definitions | `content`, `content.spec` | Core | Experimental | Folia-safe (pure specs); ContentLoader does blocking file I/O, run off-thread. |
+| Messaging | `messaging` (RedisMessageBus in ramcore-paper) | Core | Experimental | Folia-safe: delivery on async scheduler; Redis driver runtime-resolved. |
+| Operational | `update`, config (`RamCoreConfig`), bStats | Core/Paper | Stable | Update check + metrics run async on enable; bStats shaded+relocated. |
 | Cooldowns/selectors | `cooldown`, `selector` | Core | Stable | Pure filtering and state checks are Folia-safe; selected entities must be mutated on their context. |
 | PDC helpers | `pdc` | Core | Stable | Holder mutation must run on the holder owner context. |
 | Menus and item builders | `menu`, `item` | Core | Stable | Menu operations are viewer-scheduler anchored; direct inventory/entity access must stay anchored. |
