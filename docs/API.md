@@ -571,6 +571,16 @@ Primary types:
 - `ResourcePackPromptTracker` sends prompts, listens for `PlayerResourcePackStatusEvent`, and marks timed-out requests.
 - `ResourcePackItems` and `ResourcePackSounds` apply tracked item model data or create custom Adventure sounds.
 
+Building and hosting a pack (experimental, greenfield in 3.1):
+
+- `AssetSource` supplies bytes for one in-pack file, lazily, from bytes/string/file/classpath.
+- `ResourcePackBuilder` assembles the pack: `item(id, texture)` writes the modern item-model definition (`assets/<ns>/items/<name>.json`), a basic generated model, and the texture; `texture(id, png)` and `file(path, source)` add arbitrary files. `buildTo(zip[, manifest])` writes `pack.mcmeta`, zips deterministically (sorted entries, fixed timestamps → identical content yields an identical zip and SHA-1), hashes it, and returns a `PackBuildReport(added, changed, removed, unchanged, sha1Hex)` diffed against a per-file manifest. `metadata(uri, report)` produces a `ResourcePackMetadata`.
+- `PackWriters` writes the small JSON files (no Gson dependency); `PackFormats` maps a Minecraft version to a `pack_format`; `Sha1` hashes.
+- `ResourcePackHost` is an optional JDK `HttpServer` that serves one zip (swap it with `setPack` after a rebuild); host the zip externally for production and skip it.
+- `ResourcePackPromptSweeper.start(tracker, intervalTicks)` runs `ResourcePackPromptTracker.sweepTimeouts` on a repeating async timer so pending prompts time out on their own.
+
+All builder/host work is blocking file/network I/O — run it on an async scheduler. The builder is dependency-free and unit-tested off-server. Stability: **experimental** for the builder/host/sweeper; the id/asset/prompt tracking types remain **stable**.
+
 Example:
 
 ```java
@@ -609,7 +619,25 @@ ResourcePackPrompt prompt = ResourcePacks.prompt(
 tracker.send(player, prompt);
 ```
 
-Call `tracker.sweepTimeouts(nowMillis)` from a scheduled task if you use prompt timeouts. Status events update tracked requests automatically while the tracker is registered as a Bukkit listener.
+Call `tracker.sweepTimeouts(nowMillis)` from a scheduled task if you use prompt timeouts, or start `ResourcePackPromptSweeper.start(tracker, 20L)` to do it automatically. Status events update tracked requests automatically while the tracker is registered as a Bukkit listener.
+
+Building, hosting, and prompting a generated pack:
+
+```java
+PackBuildReport report = ResourcePackBuilder.create()
+        .name("Example Pack")
+        .minecraftVersion("1.21.4")
+        .item(ResourcePackAssetId.of("example", "fire_sword"), AssetSource.ofResource(getClassLoader(), "textures/fire_sword.png"))
+        .buildTo(getDataFolder().toPath().resolve("pack.zip"));
+
+if (report.dirty()) {
+    ResourcePackHost host = bind(ResourcePackHost.start("0.0.0.0", 8123, getDataFolder().toPath().resolve("pack.zip")));
+    ResourcePackPrompt prompt = ResourcePackPrompt.builder(host.uri("cdn.example.com", "pack.zip"), report.sha1Hex())
+            .forced(true)
+            .build();
+    ResourcePacks.tracker().send(player, prompt);
+}
+```
 
 ## Displays And Holograms
 
@@ -1234,6 +1262,14 @@ void savesAfterTick() {
 Rules the fake mirrors from the server backend: immediate global work runs inline when already on the sync thread (the thread that created the fake); delayed, repeating, region, and entity work waits at least one tick; a retired entity's work runs its retired callback instead. Driving methods: `tick()`, `tick(n)`, `runAsync()`, `runAll()`, `retireEntity(uuid)`. Observation: `executed()` (context descriptions in order), `errors()` (throwables raised by tasks, also reported through `RamExceptions`), `pendingSync()`, `pendingAsync()`, `pendingScheduled()`.
 
 Off-server, `RamExceptions` logs through `RamLog`, which falls back to a plain JDK logger when no plugin is bound, and skips firing `RamExceptionEvent`.
+
+## Session Recorder
+
+Package: `dev.willram.ramcore.session`. Stability: stable command contract; Folia-safe (per-player concurrent ring buffers).
+
+`SessionRecorder` keeps a bounded, per-player timeline of `SessionEvent(tick, at, type, detail)` for diagnostics. `SessionRecorder.NOOP` is the disabled instance, so instrumentation call sites stay free; `SessionRecorder.ring(capacity[, clock, tick])` is the live one (fixed-size array per player, no map allocation on the hot path). Subsystems call `record(uuid, type, detail)`; `timeline(uuid, n)` returns the last n events oldest-first. `SessionTimelines.lines(events)` formats them, and the command runs the result through `DiagnosticExporter.safeLines`.
+
+Enable with `diagnostics.timeline.enabled` (false by default); when on, `RamCore` installs a ring recorder and `/ramcore diagnostics timeline <player> [n]` prints it. The instrumentation hook-ups from other subsystems (rewards, loot, objectives, cooldown denials, region enter/exit, menu open, ability casts) are the follow-up; the recorder API is the integration point.
 
 ## Diagnostics
 
@@ -2498,6 +2534,172 @@ NmsCapabilityCheck control = nms.check(NmsCapability.ENTITY_CONTROL);
 
 `ENTITY_CONTROL` is reported as partial Paper API support. Paper covers common entity flags, target selection, pickup rules, equipment drops, attributes, and spawning. Raw movement controllers and version-specific anger internals should stay behind future adapters.
 
+## Stats
+
+Package: `dev.willram.ramcore.stat` (config type `stats` via `content.spec.StatSpec`)
+
+A custom stat system: definitions in a registry, per-player modifiers gathered from pluggable sources, and cached immutable snapshots. It is data-only and Bukkit-light; combat consumes it through `DamageCalculator`.
+
+Primary types:
+
+- `Stat(ContentId id, double base, double min, double max, StatFormat)` — a definition with a clamp range and a display format (`INTEGER`, `DECIMAL`, `PERCENT`). `StatSpec` (config type `stats`) deserializes one and `toStat(id)` converts it.
+- `StatRegistry` — owner-scoped registry backed by `ContentRegistry<Stat>`.
+- `StatModifier(ContentId statId, StatOperation, double amount, String sourceKey)` — one contribution; `StatOperation` is `ADD` or `MULTIPLY` (a fraction: `0.10` = +10%).
+- `StatSource` — `Collection<StatModifier> modifiers(Player)`. Built-ins: `ItemStatSource` (reads the `ramcore:stats` PDC map, written with `ItemStackBuilder.stat(id, amount)` / `ItemStats`), `BuffStatSource` (timed, `Terminable`, `onChange` callback), `PartyStatSource` (an extractor over `PartyManager.partyOf`), `RegionStatSource` (modifiers keyed by region id, gated on `RegionTracker` membership from task 1.5).
+- `StatSnapshot` — immutable computed values. For each registered stat: `base` + Σ`ADD`, then `× (1 + Σ MULTIPLY)`, then clamp. Modifiers for unregistered stats are ignored.
+- `StatService` — collects sources and caches one snapshot per player. `install(RamPlugin, StatRegistry)` registers it under `StatService.KEY` and installs the invalidation listener (`PlayerItemHeldEvent`, `PlayerArmorChangeEvent`, evict on quit); buff/party changes invalidate through their source `onChange`. `create(StatRegistry)` gives a listener-free service for tests.
+
+Example:
+
+```java
+StatRegistry stats = new StatRegistry();
+stats.register("example", new Stat(ContentId.of("example", "power"), 10.0, 0.0, 100.0, StatFormat.INTEGER));
+
+StatService service = StatService.install(plugin, stats); // from load()
+service.addSource(new ItemStatSource());
+
+double power = service.snapshot(player).value(ContentId.of("example", "power"));
+```
+
+Thread contract: a snapshot is read on the thread that calls `snapshot(Player)`, and sources read live equipment, so request snapshots on the player's thread. Stability: **experimental**.
+
+## Abilities
+
+Package: `dev.willram.ramcore.ability` (config type `abilities` via `content.spec.AbilitySpec`)
+
+A player ability framework: definitions in a registry, a per-player caster state machine, pluggable triggers, and experimental channelling/interrupt/combo extensions. Costs read from the `stat` system; visuals reuse `presentation.PresentationEffect`.
+
+Primary types:
+
+- `Ability` (immutable builder) — `id`, `cooldown` (`Duration`), optional `StatCost`, `castTicks`, `AbilityTargeting`, `PresentationEffect`s, `AbilityAction`, and an optional `AbilityChannel`.
+- `StatCost(statId, amount)` — a read-only gate: `affordable(StatSnapshot)`. Stats have no spendable pool, so a consumer that wants a real resource deducts it in the action.
+- `AbilityTargeting` + `AbilityTargets` — `self`, `none`, `radius`, `nearest` (via `selector`), `lookingAt` (Paper ray-trace).
+- `AbilityAction` — functional `run(AbilityContext)` + default `validate` (mirrors `reward.RewardAction`); `AbilityContext(caster, targets, snapshot, trigger, metadata)`.
+- `AbilityRegistry` — owner-scoped over `ContentRegistry<Ability>`.
+- `AbilityCaster` — per player. `cast(ability, trigger)` gates cooldown → `StatCost` → `validate`; instant abilities run inline, channelled/`castTicks` abilities schedule on the caster's scheduler; `interrupt()` cancels an in-flight channel (no cooldown applied). Returns a `CastResult` (`AbilityCastStatus`: `CAST`, `CASTING`, `ON_COOLDOWN`, `INSUFFICIENT_COST`, `INVALID`, `BUSY`). Cooldowns are tracked per ability via an injectable `Clock`.
+- `AbilityService` — owns the registry, casters, and trigger bindings (item / hotbar slot / swap-hands); `install(RamPlugin, registry[, StatService])` registers under `AbilityService.KEY` and binds `AbilityTriggerModule`. `cast(player, id, trigger)` resolves and dispatches; combos fire finishers.
+- Triggers: `AbilityTriggerModule` (item-use via `CustomItemIdentityStore`, hotbar via `PlayerItemHeldEvent`, swap-hands, quit cleanup, through the functional `Events` API) and `AbilityCommandModule` (`/<label> <ability>`).
+- Extensions (experimental): `AbilityChannel` + `ChannelTick` (repeating channel that executes on completion), `AbilityInterruptModule` (opt-in: cancel channel on damage/move), `AbilityCombo` + `ComboTracker` (ordered steps within a window fire a finisher).
+
+Example:
+
+```java
+AbilityRegistry abilities = new AbilityRegistry();
+abilities.register("example", Ability.builder(ContentId.of("example", "fireball"))
+        .cooldown(Duration.ofSeconds(5))
+        .castTicks(20)
+        .cost(ContentId.of("example", "mana"), 20.0)
+        .targeting(AbilityTargets.lookingAt(30))
+        .effects(List.of(PresentationEffects.sound(Sound.sound(Key.key("entity.blaze.shoot"), Sound.Source.PLAYER, 1f, 1f))))
+        .action(ctx -> ctx.targets().forEach(t -> t.setFireTicks(60)))
+        .build());
+
+AbilityService service = AbilityService.install(plugin, abilities, statService); // from load()
+service.bindHotbar(0, ContentId.of("example", "fireball"));
+```
+
+Thread contract: casts run on the caster's thread (trigger events and the cast timer both fire there). Stability: **experimental**.
+
+## Dialogue
+
+Package: `dev.willram.ramcore.dialogue` (config type `dialogues` via `content.spec.DialogueSpec`)
+
+A branching dialogue system: a validated node graph, per-player sessions, and chat or menu presentation. Conditions are `Predicate<DialogueContext>`; actions reuse `reward`, `menu`, and `text`.
+
+Primary types:
+
+- `Dialogue` (builder, validated: start node exists, every choice targets a real node or ends) of `DialogueNode`s. `DialogueNode` (builder) has text, choices, an availability condition, and enter actions; `availableChoices(ctx)` filters by condition.
+- `DialogueChoice(label, nextNodeId, condition, actions)` — `nextNodeId == null` ends the dialogue.
+- `DialogueContext(player, metadata)`; `DialogueConditions` (`always`, `permission`, `metadataEquals`, composable via `Predicate`); `DialogueAction` + `DialogueActions` (`message`, `playerCommand`, `reward`, `openMenu`, `custom`).
+- `DialogueRegistry` — owner-scoped over `ContentRegistry<Dialogue>`.
+- `DialogueSession` — a player's walk: `start()` enters the start node, `choose(index)` runs the choice actions and advances, ending on a null next-node or a choiceless node. Presentation is a `DialoguePresenter`: `ChatDialoguePresenter` (clickable lines via Paper `ClickEvent.callback`, no command registration) or `MenuDialoguePresenter` (chest buttons via `MenuView`). `DialogueSession.chat(player, dialogue)` / `menu(player, dialogue, title)`.
+- `Dialogues.onClick(dialogue)` / `onClickMenu(dialogue, title)` return an `NpcClickHandler` for `NpcSpec.onClick(..)`. For an objective link, add a `custom` action that fires an `ObjectiveEvent(RUN_ACTION, "dialogue:" + id)` into your tracker.
+
+Example:
+
+```java
+Dialogue quest = Dialogue.builder(ContentId.of("example", "guard"))
+        .node(DialogueNode.builder("root", "<yellow>Halt! What do you want?")
+                .choice(DialogueChoice.of("Trade", "trade"))
+                .choice(DialogueChoice.of("Nothing", null))
+                .build())
+        .node(DialogueNode.builder("trade", "<green>Very well.")
+                .action(DialogueActions.playerCommand("trade guard"))
+                .build())
+        .build();
+
+npcSpec.onClick(Dialogues.onClick(quest));
+```
+
+Config dialogues (`dialogues` type) cover node text, choices, `permission` conditions, and `messages`/`commands` actions; reward/menu/custom actions are code-supplied via the builder. Runs on the player's thread. Stability: **experimental**.
+
+## Instanced Worlds
+
+Package: `dev.willram.ramcore.worldinstance` (Paper backend in `ramcore-paper`)
+
+Copies a world template to a fresh directory, loads it as a throwaway instance, and tears it down (evacuate → unload → delete) on close.
+
+Primary types:
+
+- `WorldInstanceService.create(templateName, options) -> Promise<WorldInstance>` — copies `world-templates/<name>/` (skipping `uid.dat`/`session.lock`) to `ramcore_inst_<name>_<id>/`, writes an `InstanceMarker` (`ramcore-instance.json`), and loads it. `sweepStartup()` deletes leftover marked directories from a previous run.
+- `WorldInstance` (Terminable) — `closeAsync()` evacuates players, unloads, and (per `WorldInstanceOptions`) deletes the directory; bind it to a `PartyGroup`/encounter so it tears down with them.
+- `WorldBackend` — the platform seam (`supportsInstances`, `worldContainer`, `loadWorld`, `unloadWorld`, `evacuate`). `PaperWorldBackend` implements it (`Bukkit.createWorld` on the global region, `teleportAsync` evacuation); an in-memory fake makes the copy/marker/sweep logic unit-testable. `WorldInstances`/`InstanceMarker` are the file primitives.
+
+Runtime world creation is gated on `WorldBackend.supportsInstances()` — **false on Folia**, where `create` fails with an actionable message rather than corrupting state. Copy/marker/delete run on the async scheduler; load/unload hop to the global region. Stability: **Paper-experimental**.
+
+```java
+WorldInstanceService worlds = new WorldInstanceService(new PaperWorldBackend(),
+        getDataFolder().toPath().resolve("world-templates"));
+worlds.sweepStartup(); // at enable, on the async scheduler
+worlds.create("dungeon", WorldInstanceOptions.defaults())
+        .thenAccept(TaskContext.global(), instance -> party.bind(instance)); // torn down with the party
+```
+
+## Real-Time And Cron Scheduling
+
+Package: `dev.willram.ramcore.schedule`
+
+Runs jobs on wall-clock time — cron, fixed interval, or daily — Folia-aware and restart-safe.
+
+Primary types:
+
+- `Schedule` — `nextAfter(Instant, ZoneId)`; built-ins `cron(String)` (an in-house 5-field parser, `CronExpression`, no dependency), `every(Duration)`, `at(LocalTime)`.
+- `Job(id, Schedule, ZoneId, MissedRunPolicy, TaskContext, Runnable)` — the task runs on its declared `TaskContext`. `MissedRunPolicy` is `skip()` or `catchUp(max)`. `JobState(lastRun, nextRun)` (epoch millis) is the persistable timing state.
+- `RealTimeScheduler` — a once-per-second async ticker computes due jobs and runs each on its context; `register(job)` / `register(job, previousState)` (the latter applies the missed-run policy for the gap since `lastRun`). Uses an injectable `Clock`.
+
+State is held in memory; persist `JobState` in a `Store<String, JobState>` and seed `register(job, state)` at startup to survive restarts. `tick(now)` is public for deterministic tests. Stability: **experimental**.
+
+```java
+RealTimeScheduler scheduler = new RealTimeScheduler();
+scheduler.register(new Job("daily-reset",
+        Schedule.cron("0 4 * * *"), ZoneId.of("UTC"), MissedRunPolicy.catchUp(1),
+        TaskContext.global(), () -> resetDailies()));
+scheduler.start();
+```
+
+## Hot-Reloadable Content
+
+Package: `dev.willram.ramcore.reload`
+
+Reloads content packs at runtime and rebuilds the live objects built from them, without a server restart.
+
+Primary types:
+
+- `ContentSnapshot` (id → node hash via `ContentHashing`, from a `ContentLoadResult`) and `ContentDiff(added, removed, changed, brokenReferences, rebuilt, failed, errors)` (`ContentDiff.data` computes the data diff; `withRebuild` fills rebuild results).
+- `TemplateBound` — a live object: `templateId()`, `rebind(resolved)`, and an `owner()` scheduler (entity/region/global). Register instances in a `LiveObjectRegistry`.
+- `ContentPack(name, root, ContentResolver)` — `ContentResolver` turns a reloaded `ContentDefinition` into the domain object for rebinding.
+- `ContentReloadService.reload(pack | name) -> Promise<ContentDiff>` — reruns `ContentLoader` off-thread, diffs against the pack's previous snapshot, resolves added/changed definitions, and dispatches each affected live object's `rebind` to its owner scheduler. Failures are collected, never thrown: `diff.failed` lists resolution failures; a rebind that throws on its owner thread is caught and logged.
+
+`RamCore` exposes a shared service via `RamCore.reloadService()`; register your `ContentPack`s there and `/ramcore diagnostics reload <pack>` prints the resulting diff. Stability: **experimental**.
+
+```java
+ContentReloadService reload = ((RamCore) getServer().getPluginManager().getPlugin("RamCore")).reloadService();
+reload.register(new ContentPack("myplugin",
+        getDataFolder().toPath().resolve("content"),
+        def -> ItemSpec.deserialize(def.node())));
+reload.liveObjects().register(myLiveNpc); // implements TemplateBound
+```
+
 ## Attribute And Combat Helpers
 
 Package: `dev.willram.ramcore.combat`
@@ -2512,6 +2714,7 @@ Primary types:
 - `AttributeBuff` applies an attribute spec temporarily and restores previous base values and same-key modifiers when closed.
 - `CombatProfile` groups common mob combat attributes such as movement speed, follow range, armor, armor toughness, scale, safe fall distance, gravity, step height, knockback resistance, and interaction reach.
 - `DamageProfile` applies damage with optional damager or `DamageSource`, no-damage-tick clearing, post-damage invulnerability ticks, and hurt direction.
+- `DamageCalculator` turns a base amount plus attacker/defender `StatSnapshot`s into a `DamageBreakdown` (crit, elemental resistance, flat defense, lifesteal) reading the standard `CombatStats` ids. `DamageProfile.Builder.withStats(attacker, defender[, element])` runs it, sets the amount to the mitigated result, and records the breakdown (`DamageProfile.breakdown()`, used for lifesteal). Callers that never call `withStats` are unaffected. Pass `.calculator(..)` for deterministic crits; the calculator itself is pure and unit-testable off-server.
 
 Example:
 
@@ -2551,6 +2754,21 @@ CombatControls.damage(8.0)
         .hurtDirection(180.0f)
         .build()
         .apply(target);
+```
+
+Stat-driven damage:
+
+```java
+DamageProfile profile = CombatControls.damage(8.0)
+        .damager(attacker)
+        .withStats(stats.snapshot(attacker), stats.snapshot(target), "fire")
+        .build();
+profile.apply(target);
+profile.breakdown().ifPresent(b -> {
+    if (b.lifestealHealed() > 0 && attacker instanceof LivingEntity living) {
+        living.setHealth(Math.min(living.getHealth() + b.lifestealHealed(), maxHealth));
+    }
+});
 ```
 
 NMS capability reporting:
@@ -2759,6 +2977,12 @@ Stability: experimental.
 | `reward` | Generic reward validation, preview, and execution pipeline. |
 | `scheduler` | Paper/Folia-aware scheduling and task contexts. |
 | `selector` | Reusable collection-based player and entity selectors. |
+| `stat` | Custom stat definitions, per-player modifier sources, cached snapshots, and the item stat map. |
+| `ability` | Ability definitions, per-player caster state machine, triggers, and channel/interrupt/combo extensions. |
+| `dialogue` | Branching dialogue graph, per-player sessions, and chat/menu presentation. |
+| `reload` | Content snapshot/diff and hot-reload of live template-bound objects. |
+| `schedule` | Real-time cron/interval/daily job scheduling with an in-house cron parser. |
+| `worldinstance` | Template-copied throwaway world instances with lifecycle teardown (Paper backend). |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |

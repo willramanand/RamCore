@@ -1,0 +1,13 @@
+name: RamCoreSample
+version: '1.0.0'
+main: dev.willram.ramcore.example.SamplePlugin
+description: Example plugin demonstrating RamCore gameplay platform APIs.
+authors:
+  - willramanand
+api-version: '1.21'
+dependencies:
+  server:
+    RamCore:
+      load: BEFORE
+      required: true
+      join-classpath: true

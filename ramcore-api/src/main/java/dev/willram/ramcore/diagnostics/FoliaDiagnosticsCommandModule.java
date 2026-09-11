@@ -17,10 +17,15 @@ import dev.willram.ramcore.commands.ResolvedCommandArgument;
 import dev.willram.ramcore.content.ContentLoadResult;
 import dev.willram.ramcore.content.ContentLoader;
 import dev.willram.ramcore.integration.IntegrationRegistry;
+import dev.willram.ramcore.session.SessionEvent;
+import dev.willram.ramcore.session.SessionRecorder;
+import dev.willram.ramcore.session.SessionTimelines;
 import dev.willram.ramcore.integration.Integrations;
 import dev.willram.ramcore.item.nbt.ItemSnapshot;
 import dev.willram.ramcore.nms.api.NmsAccess;
 import dev.willram.ramcore.nms.api.NmsAccessRegistry;
+import dev.willram.ramcore.reload.ContentDiff;
+import dev.willram.ramcore.reload.ContentReloadService;
 import dev.willram.ramcore.scheduler.TaskContext;
 import dev.willram.ramcore.scheduler.Schedulers;
 import dev.willram.ramcore.scheduler.Task;
@@ -61,6 +66,8 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
     private static final CommandArgument<String> PROVIDER = RamArguments.word("provider");
     private static final CommandArgument<String> VALIDATE_PLUGIN = RamArguments.word("plugin");
     private static final CommandArgument<String> VALIDATE_SUBDIR = RamArguments.word("subdir");
+    private static final CommandArgument<String> RELOAD_PACK = RamArguments.word("pack");
+    private static final CommandArgument<Integer> TIMELINE_COUNT = RamArguments.integer("count", 1, 200);
     private static final ResolvedCommandArgument<List<Player>, PlayerSelectorArgumentResolver> PLAYER = RamArguments.player("player");
     private static final ResolvedCommandArgument<List<Entity>, EntitySelectorArgumentResolver> ENTITY = RamArguments.entity("entity");
 
@@ -68,20 +75,51 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
     private final IntegrationRegistry integrations;
     private final NmsAccessRegistry nms;
     private final DiagnosticRegistry diagnosticRegistry;
+    private final SessionRecorder sessionRecorder;
+    private final ContentReloadService reloadService;
     private final CommandSpec command;
 
     public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin) {
-        this(plugin, Integrations.standard(), NmsAccess.runtimeRegistry(), DiagnosticRegistry.create());
+        this(plugin, Integrations.standard(), NmsAccess.runtimeRegistry(), DiagnosticRegistry.create(), SessionRecorder.NOOP);
+    }
+
+    public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin, @NotNull SessionRecorder sessionRecorder) {
+        this(plugin, Integrations.standard(), NmsAccess.runtimeRegistry(), DiagnosticRegistry.create(), sessionRecorder);
+    }
+
+    public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin, @NotNull SessionRecorder sessionRecorder,
+                                         @Nullable ContentReloadService reloadService) {
+        this(plugin, Integrations.standard(), NmsAccess.runtimeRegistry(), DiagnosticRegistry.create(), sessionRecorder,
+                reloadService);
     }
 
     public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin,
                                          @NotNull IntegrationRegistry integrations,
                                          @NotNull NmsAccessRegistry nms,
                                          @NotNull DiagnosticRegistry diagnosticRegistry) {
+        this(plugin, integrations, nms, diagnosticRegistry, SessionRecorder.NOOP);
+    }
+
+    public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin,
+                                         @NotNull IntegrationRegistry integrations,
+                                         @NotNull NmsAccessRegistry nms,
+                                         @NotNull DiagnosticRegistry diagnosticRegistry,
+                                         @NotNull SessionRecorder sessionRecorder) {
+        this(plugin, integrations, nms, diagnosticRegistry, sessionRecorder, null);
+    }
+
+    public FoliaDiagnosticsCommandModule(@NotNull RamPlugin plugin,
+                                         @NotNull IntegrationRegistry integrations,
+                                         @NotNull NmsAccessRegistry nms,
+                                         @NotNull DiagnosticRegistry diagnosticRegistry,
+                                         @NotNull SessionRecorder sessionRecorder,
+                                         @Nullable ContentReloadService reloadService) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.integrations = Objects.requireNonNull(integrations, "integrations");
         this.nms = Objects.requireNonNull(nms, "nms");
         this.diagnosticRegistry = Objects.requireNonNull(diagnosticRegistry, "diagnosticRegistry");
+        this.sessionRecorder = Objects.requireNonNull(sessionRecorder, "sessionRecorder");
+        this.reloadService = reloadService;
         this.command = createCommand();
     }
 
@@ -275,7 +313,23 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
                                 .argument(VALIDATE_SUBDIR, subdirArgument -> subdirArgument
                                         .description("Validate plugins/<plugin>/<subdir> off-thread.")
                                         .example("ramcore diagnostics validate MyPlugin content")
-                                        .executesAsync(context -> runValidate(context, context.get(VALIDATE_PLUGIN), context.get(VALIDATE_SUBDIR)))))));
+                                        .executesAsync(context -> runValidate(context, context.get(VALIDATE_PLUGIN), context.get(VALIDATE_SUBDIR))))))
+                .literal("timeline", timeline -> timeline
+                        .description("Print a player's recorded session timeline.")
+                        .argument(PLAYER, playerArgument -> playerArgument
+                                .description("Print the last 20 timeline events for a player.")
+                                .example("ramcore diagnostics timeline Steve")
+                                .executes(context -> printTimeline(context, context.player(PLAYER), 20))
+                                .argument(TIMELINE_COUNT, countArgument -> countArgument
+                                        .description("Print the last N timeline events for a player.")
+                                        .example("ramcore diagnostics timeline Steve 50")
+                                        .executes(context -> printTimeline(context, context.player(PLAYER), context.get(TIMELINE_COUNT))))))
+                .literal("reload", reload -> reload
+                        .description("Hot-reload a registered content pack and print the diff.")
+                        .argument(RELOAD_PACK, packArgument -> packArgument
+                                .description("Reload the content pack by name.")
+                                .example("ramcore diagnostics reload MyPlugin")
+                                .executes(context -> runReload(context, context.get(RELOAD_PACK))))));
 
         spec.literal("inspect", inspect -> inspect
                 .description("Inspect selected runtime objects.")
@@ -318,6 +372,15 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
                         })));
 
         return spec;
+    }
+
+    private void printTimeline(@NotNull CommandContext context, @NotNull Player player, int count) {
+        java.util.List<SessionEvent> events = this.sessionRecorder.timeline(player.getUniqueId(), count);
+        if (events.isEmpty()) {
+            context.reply("<gray>No recorded timeline for <white>" + player.getName() + "</white> (is diagnostics.timeline.enabled set?).");
+            return;
+        }
+        sendPlainLines(context, DiagnosticExporter.safeLines(SessionTimelines.lines(events)));
     }
 
     private void runValidate(@NotNull CommandContext context, @NotNull String pluginName, @NotNull String subdir) throws CommandInterruptException {
@@ -457,6 +520,37 @@ public final class FoliaDiagnosticsCommandModule implements CommandModule {
         for (String line : lines) {
             context.reply(line);
         }
+    }
+
+    private void runReload(@NotNull CommandContext context, @NotNull String pack) {
+        if (this.reloadService == null) {
+            context.reply("<red>Content reload is not enabled on this server.");
+            return;
+        }
+        if (this.reloadService.pack(pack).isEmpty()) {
+            context.reply("<red>No content pack named <white>" + pack + "</white> is registered.");
+            return;
+        }
+        context.reply("<gray>Reloading content pack <white>" + pack + "</white>...");
+        this.reloadService.reload(pack).thenApply(TaskContext.async(), diff -> {
+            sendPlainLines(context, reloadLines(pack, diff));
+            return diff;
+        });
+    }
+
+    private static List<String> reloadLines(@NotNull String pack, @NotNull ContentDiff diff) {
+        List<String> lines = new java.util.ArrayList<>();
+        lines.add("Reload of '" + pack + "':");
+        lines.add("  added=" + diff.added().size()
+                + " changed=" + diff.changed().size()
+                + " removed=" + diff.removed().size()
+                + " rebuilt=" + diff.rebuilt().size()
+                + " failed=" + diff.failed().size()
+                + " brokenRefs=" + diff.brokenReferences().size());
+        diff.failed().forEach(id -> lines.add("  FAILED " + id));
+        diff.brokenReferences().forEach(id -> lines.add("  BROKEN-REF " + id));
+        diff.errors().forEach(error -> lines.add("  ERROR " + error));
+        return lines;
     }
 
     private static void sendPlainLines(@NotNull CommandContext context, @NotNull List<String> lines) {

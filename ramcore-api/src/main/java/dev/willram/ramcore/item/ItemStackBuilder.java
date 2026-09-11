@@ -223,6 +223,18 @@ public final class ItemStackBuilder {
         return this;
     }
 
+    /**
+     * Writes a stat amount into the item's {@code ramcore:stats} map, read back by
+     * {@code ItemStatSource}. Replaces any existing amount for the same stat.
+     *
+     * @param id     the stat id
+     * @param amount the additive amount
+     * @return this builder
+     */
+    public ItemStackBuilder stat(dev.willram.ramcore.content.ContentId id, double amount) {
+        return transformMeta(meta -> dev.willram.ramcore.stat.ItemStats.put(meta, id, amount));
+    }
+
     public ItemStackBuilder components(ItemComponentPatch patch) {
         return transform(itemStack -> patch.apply(ItemComponents.edit(itemStack)));
     }

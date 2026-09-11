@@ -1,5 +1,6 @@
 package dev.willram.ramcore.combat;
 
+import dev.willram.ramcore.stat.StatSnapshot;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Controlled damage application with Paper-exposed invulnerability frame hooks.
@@ -20,6 +22,7 @@ public final class DamageProfile {
     private final Integer noDamageTicksAfter;
     private final Integer maximumNoDamageTicksAfter;
     private final Float hurtDirection;
+    private final DamageBreakdown breakdown;
 
     private DamageProfile(Builder builder) {
         if (builder.amount < 0.0d) {
@@ -32,11 +35,29 @@ public final class DamageProfile {
         this.noDamageTicksAfter = builder.noDamageTicksAfter;
         this.maximumNoDamageTicksAfter = builder.maximumNoDamageTicksAfter;
         this.hurtDirection = builder.hurtDirection;
+        this.breakdown = builder.breakdown;
     }
 
     @NotNull
     public static Builder amount(double amount) {
         return new Builder().amount(amount);
+    }
+
+    /** The final damage this profile applies. */
+    public double amount() {
+        return this.amount;
+    }
+
+    /**
+     * The stat breakdown behind this profile's amount when built via
+     * {@link Builder#withStats(StatSnapshot, StatSnapshot)}; empty otherwise. Callers use it to apply
+     * lifesteal, since {@link #apply(Damageable)} damages only the target.
+     *
+     * @return the breakdown, or empty
+     */
+    @NotNull
+    public Optional<DamageBreakdown> breakdown() {
+        return Optional.ofNullable(this.breakdown);
     }
 
     public void apply(@NotNull Damageable target) {
@@ -72,9 +93,56 @@ public final class DamageProfile {
         private Integer noDamageTicksAfter;
         private Integer maximumNoDamageTicksAfter;
         private Float hurtDirection;
+        private DamageBreakdown breakdown;
+        private DamageCalculator calculator;
 
         public Builder amount(double amount) {
             this.amount = amount;
+            return this;
+        }
+
+        /**
+         * The {@link DamageCalculator} used by {@link #withStats(StatSnapshot, StatSnapshot)}. When
+         * unset a default (randomised crit) calculator is used. Set an explicit one for deterministic
+         * crits.
+         *
+         * @param calculator the calculator
+         * @return this builder
+         */
+        @NotNull
+        public Builder calculator(@NotNull DamageCalculator calculator) {
+            this.calculator = Objects.requireNonNull(calculator, "calculator");
+            return this;
+        }
+
+        /**
+         * Runs the {@link DamageCalculator} over the current amount and the two snapshots, sets the
+         * amount to the mitigated final damage, and records the {@link DamageBreakdown} (see
+         * {@link DamageProfile#breakdown()}). Callers that never call this are unaffected.
+         *
+         * @param attacker the attacker's stats
+         * @param defender the defender's stats
+         * @return this builder
+         */
+        @NotNull
+        public Builder withStats(@NotNull StatSnapshot attacker, @NotNull StatSnapshot defender) {
+            return withStats(attacker, defender, null);
+        }
+
+        /**
+         * As {@link #withStats(StatSnapshot, StatSnapshot)}, with an element for resistance.
+         *
+         * @param attacker the attacker's stats
+         * @param defender the defender's stats
+         * @param element  the damage element, or {@code null} for untyped
+         * @return this builder
+         */
+        @NotNull
+        public Builder withStats(@NotNull StatSnapshot attacker, @NotNull StatSnapshot defender,
+                                 @Nullable String element) {
+            DamageCalculator calc = this.calculator != null ? this.calculator : new DamageCalculator();
+            this.breakdown = calc.calculate(this.amount, attacker, defender, element);
+            this.amount = this.breakdown.finalDamage();
             return this;
         }
 
