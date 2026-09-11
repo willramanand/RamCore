@@ -193,6 +193,8 @@ Design choice: raw backends (`InMemoryStore`, `FileStore`, `SqlStore`) are state
 
 Facade `Stores`: `inMemory()`, `file(dir, keyCodec, codec)`, `sql(config, table, keyCodec, codec)`, `cached(store)`, `migrations()`. Kotlin: `store<K, V> { ... }` after PR 4. Stability: `Store`/`CachedStore`/`InMemoryStore`/`FileStore` **stable**; `SqlStore` **experimental** (dialects beyond SQLite are untested live).
 
+**Outcome (done 2026-09-10, four commits on `phase/b-roadmap-1x`).** Landed as designed with two deviations: migrations use a store-level `StoreMigration<V>` (the existing `DataMigration` is bounded to `DataItem`), and `StoreMigrations.start().to(..)` replaced a static `to(..)` that clashed with the instance method under erasure. Cached stores flush synchronously on `close()` with a bounded wait; tests drive async backends with `FakeScheduler.runAll()` before closing. Loot payloads persist through a consumer-supplied `LootPayloadCodec`. Open item: `RamCoreLoader` (Paper `PluginLoader`) that resolves HikariCP and JDBC drivers at runtime is not written yet; it belongs to 2.5 alongside RamCore's `config.yml`. Until then SQL stores work only where a consumer plugin ships the driver.
+
 ### 1.2 Player data lifecycle — **L** (2 PRs)
 
 `dev.willram.ramcore.playerdata`.

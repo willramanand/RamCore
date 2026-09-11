@@ -1,5 +1,6 @@
 package dev.willram.ramcore.loot;
 
+import dev.willram.ramcore.store.Store;
 import dev.willram.ramcore.content.ContentId;
 import dev.willram.ramcore.nms.api.NmsAccessRegistry;
 import dev.willram.ramcore.nms.api.NmsAccessTier;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * Facade for loot tables, generation, and claimable instances.
@@ -27,6 +29,19 @@ public final class InstancedLoot {
     @NotNull
     public static LootInstanceStore inMemoryStore() {
         return new InMemoryLootInstanceStore();
+    }
+
+    /**
+     * A loot instance store that writes through to a persistence backend, for example
+     * {@code Stores.jsonByUuid(dir, LootInstanceSnapshot.class)}. Call {@code load()} once.
+     *
+     * @param store    the backend
+     * @param payloads codec for reward payloads
+     * @return the store
+     */
+    @NotNull
+    public static PersistentLootInstanceStore persistentStore(@NotNull Store<UUID, LootInstanceSnapshot> store, @NotNull LootPayloadCodec payloads) {
+        return new PersistentLootInstanceStore(store, payloads);
     }
 
     @NotNull

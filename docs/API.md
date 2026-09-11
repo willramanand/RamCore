@@ -1885,7 +1885,50 @@ public final class ExampleValue implements GsonSerializable {
 
 Use `GsonProvider.standard()` for normal serialization and `GsonProvider.prettyPrinting()` for human-readable output.
 
+## Stores
+
+Package: `dev.willram.ramcore.store` (and `store.sql`)
+
+Stability: `Store`, `CachedStore`, `InMemoryStore`, `FileStore`, migrations and codecs are **stable**; `SqlStore` is **experimental** (SQLite is exercised in tests, MySQL/MariaDB/PostgreSQL only at the SQL-string level). Folia: safe by design. Every method returns a `Promise` completed on the async scheduler; pick a `TaskContext` for continuations that touch server state.
+
+A `Store<K, V>` is a keyed async transport: `load`, `save`, `delete`, `loadAll`, `keys`. Backends never track what changed; wrap one in a `CachedStore` for an in-memory working set with dirty tracking:
+
+```java
+CachedStore<UUID, Profile> profiles = Stores.cached(Stores.jsonByUuid(dataFolder.resolve("profiles"), Profile.class));
+bind(profiles);                                  // close() flushes dirty entries on disable (bounded, 30s)
+
+profiles.load(uuid).thenAccept(TaskContext.of(player), loaded -> greet(player, profiles.require(uuid)));
+profiles.put(uuid, profile);                     // cache + dirty, no I/O
+profiles.saveDirty();                            // writes only dirty keys
+```
+
+Backends: `Stores.inMemory()` (synchronous, the default everywhere), `Stores.file(dir, keyCodec, codec)` / `jsonByUuid` / `jsonByString` (one atomically written file per key), `Stores.sql(SqlStoreConfig, table, keyCodec, codec)` (HikariCP pool) or `Stores.sql(ConnectionProvider, dialect, ..)` for a custom or unpooled connection. Operations on one key run in submission order; different keys may interleave.
+
+Values are stored as `StoredRecord(dataVersion, value)`. Register `StoreMigrations` on the backend and old records are upgraded on load and written back:
+
+```java
+StoreMigrations<Profile> migrations = StoreMigrations.<Profile>start()
+        .to(2, (profile, from) -> profile.withLevel(profile.level() + 100))
+        .to(3, (profile, from) -> profile.withName(profile.name().toUpperCase()));
+FileStore<UUID, Profile> store = Stores.file(dir, DataKeyCodec.uuidKeys(), StoreCodec.gson(Profile.class), migrations);
+```
+
+Codecs: `StoreCodec.gson(type)` writes a `{"version", "data"}` envelope; `StoreCodec.dataItem(type)` writes raw JSON with the item's own `dataVersion` field and reads files produced by the deprecated `FileDataRepository`.
+
+SQL: `SqlStoreConfig.sqlite(path)` or `SqlStoreConfig.of(jdbcUrl, user, password)`; `SqlStoreConfig.configKeys("storage.sql")` registers `url`, `username`, `password`, `pool-size` with `BukkitConfig`, and `fromConfig` reads them back. HikariCP and the JDBC driver are resolved at runtime by the plugin loader (ADR-0003); `Stores.sql(config, ..)` throws an `ApiMisuseException` naming the fix when they are absent. Servers without internet access must place the resolved libraries in Paper's `libraries/` directory.
+
+Domain stores wire the same contract into gameplay state. Each defaults to in-memory, so behaviour without persistence is unchanged; each exposes `load()` to restore on startup and writes through on every change:
+
+- `PartyStore` with `PartyManager.create(options, clock, store)`: leader and member roles persist; invites, metadata and contributions do not.
+- `CooldownStore<K>` with `CooldownTracker.create(base, store)`: consumed cooldowns persist and elapsed ones are dropped on load. `CooldownKey.keyCodec()` exists for file/SQL backends.
+- `ObjectiveProgressStore` with `ObjectiveTracker.create(store)`: task amounts persist per `ObjectiveProgressKey(subject, objectiveId)`.
+- `InstancedLoot.persistentStore(store, LootPayloadCodec)`: a `LootInstanceStore` that writes claims, rerolls and removals through. Reward payloads are `Object`, so the consumer supplies the payload codec; `LootPayloadCodec.strings()` covers string payloads and rejects anything else at save time.
+
+Testing: `StoreContractTest` in `src/test` runs the same cases against every backend; `FakeScheduler.runAll()` drives async backends.
+
 ## Repositories And Data Items
+
+Deprecated since 2.1 in favour of [Stores](#stores). Kept working; `FileDataRepository` shares its atomic file writer with `FileStore` and the two read each other's files through `StoreCodec.dataItem`.
 
 Package: `dev.willram.ramcore.data`
 

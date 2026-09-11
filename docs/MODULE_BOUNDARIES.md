@@ -12,7 +12,8 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Commands | `commands` | Core | Stable | Command registration is Paper lifecycle based; world/entity mutations must schedule explicitly. |
 | Scheduling | `scheduler` | Core | Stable | Folia-safe by design. |
 | Text and messages | `text`, `message` | Core | Stable | Folia-safe. |
-| Data, config, JSON | `data`, `config`, `datatree`, `gson` | Core | Stable | Folia-safe for in-memory and file work; Bukkit object mutation still needs an owner context. |
+| Data, config, JSON | `data`, `config`, `datatree`, `gson` | Core | Stable (`data` repositories deprecated) | Folia-safe for in-memory and file work; Bukkit object mutation still needs an owner context. |
+| Stores | `store`, `store.sql` | Core (`store.sql` is an optional backend resolved at runtime) | Stable; `SqlStore` experimental | Folia-safe by design: all I/O on the async scheduler, promises anchored by the caller. |
 | Cooldowns/selectors | `cooldown`, `selector` | Core | Stable | Pure filtering and state checks are Folia-safe; selected entities must be mutated on their context. |
 | PDC helpers | `pdc` | Core | Stable | Holder mutation must run on the holder owner context. |
 | Menus and item builders | `menu`, `item` | Core | Stable | Menu operations are viewer-scheduler anchored; direct inventory/entity access must stay anchored. |

@@ -119,6 +119,12 @@ public final class LootInstance {
         }
     }
 
+    /** Restores persisted claims; used when rebuilding an instance from a snapshot. */
+    synchronized void restoreClaims(@NotNull Set<UUID> claimants) {
+        this.claimedBy.clear();
+        this.claimedBy.addAll(Objects.requireNonNull(claimants, "claimants"));
+    }
+
     public static final class Builder {
         private final ContentId tableId;
         private final List<LootReward> rewards;

@@ -1,5 +1,7 @@
 package dev.willram.ramcore.party;
 
+import dev.willram.ramcore.promise.Promise;
+import dev.willram.ramcore.utils.RamLog;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Clock;
@@ -24,25 +26,91 @@ public final class PartyManager {
     private final PartyOptions options;
     private final Clock clock;
 
-    private PartyManager(@NotNull PartyOptions options, @NotNull Clock clock) {
+    private final PartyStore store;
+
+    private PartyManager(@NotNull PartyOptions options, @NotNull Clock clock, @NotNull PartyStore store) {
         this.options = requireNonNull(options, "options");
         this.clock = requireNonNull(clock, "clock");
+        this.store = requireNonNull(store, "store");
         this.rules.add(PartyMembershipRules.maxMembers(options.maxMembers()));
     }
 
     @NotNull
     public static PartyManager create() {
-        return new PartyManager(PartyOptions.defaults(), Clock.systemUTC());
+        return new PartyManager(PartyOptions.defaults(), Clock.systemUTC(), PartyStore.inMemory());
     }
 
     @NotNull
     public static PartyManager create(@NotNull PartyOptions options) {
-        return new PartyManager(options, Clock.systemUTC());
+        return new PartyManager(options, Clock.systemUTC(), PartyStore.inMemory());
     }
 
     @NotNull
     public static PartyManager create(@NotNull PartyOptions options, @NotNull Clock clock) {
-        return new PartyManager(options, clock);
+        return new PartyManager(options, clock, PartyStore.inMemory());
+    }
+
+    /**
+     * Creates a manager that writes every membership change through to the store.
+     *
+     * @param options membership options
+     * @param clock   invite expiry clock
+     * @param store   persistence; call {@link #load()} once after construction
+     * @return the manager
+     */
+    @NotNull
+    public static PartyManager create(@NotNull PartyOptions options, @NotNull Clock clock, @NotNull PartyStore store) {
+        return new PartyManager(options, clock, store);
+    }
+
+    /**
+     * The store this manager persists to.
+     *
+     * @return the party store
+     */
+    @NotNull
+    public PartyStore store() {
+        return this.store;
+    }
+
+    /**
+     * Restores every persisted party. Parties whose members are already in a live party are
+     * skipped. Safe to call once at startup before players join.
+     *
+     * @return number of parties restored
+     */
+    @NotNull
+    public Promise<Integer> load() {
+        return Promise.wrapFuture(this.store.loadAll().toCompletableFuture().thenApply(this::restore));
+    }
+
+    private synchronized int restore(Map<PartyId, PartySnapshot> snapshots) {
+        int restored = 0;
+        for (PartySnapshot snapshot : snapshots.values()) {
+            PartyId id = snapshot.partyId();
+            if (this.parties.containsKey(id) || snapshot.roles().keySet().stream().anyMatch(this.memberIndex::containsKey)) {
+                continue;
+            }
+            PartyGroup party = PartyGroup.restore(snapshot);
+            this.parties.put(id, party);
+            party.members().forEach(member -> this.memberIndex.put(member, id));
+            restored++;
+        }
+        return restored;
+    }
+
+    private void persist(@NotNull PartyGroup party) {
+        this.store.save(party.id(), PartySnapshot.of(party)).exceptionallyAsync(error -> {
+            RamLog.warn("failed to persist party " + party.id(), error);
+            return null;
+        });
+    }
+
+    private void forget(@NotNull PartyId id) {
+        this.store.delete(id).exceptionallyAsync(error -> {
+            RamLog.warn("failed to delete persisted party " + id, error);
+            return null;
+        });
     }
 
     @NotNull
@@ -69,6 +137,7 @@ public final class PartyManager {
         PartyGroup party = new PartyGroup(id, leader);
         this.parties.put(id, party);
         this.memberIndex.put(leader, id);
+        persist(party);
         return PartyResult.ok(party);
     }
 
@@ -145,6 +214,7 @@ public final class PartyManager {
         party.removeInvite(playerId);
         party.addMember(playerId);
         this.memberIndex.put(playerId, party.id());
+        persist(party);
         return PartyResult.ok(party);
     }
 
@@ -163,6 +233,7 @@ public final class PartyManager {
         }
         party.addMember(playerId);
         this.memberIndex.put(playerId, party.id());
+        persist(party);
         return PartyResult.ok(party);
     }
 
@@ -185,6 +256,7 @@ public final class PartyManager {
         }
         party.removeMember(playerId);
         this.memberIndex.remove(playerId);
+        persist(party);
         return PartyResult.ok();
     }
 
@@ -205,6 +277,7 @@ public final class PartyManager {
         }
         party.removeMember(target);
         this.memberIndex.remove(target);
+        persist(party);
         return PartyResult.ok();
     }
 
@@ -221,6 +294,7 @@ public final class PartyManager {
             return PartyResult.failure("target is not in the party");
         }
         party.promote(target);
+        persist(party);
         return PartyResult.ok();
     }
 
@@ -232,6 +306,7 @@ public final class PartyManager {
         }
         party.members().forEach(this.memberIndex::remove);
         party.cleanup();
+        forget(partyId);
         return PartyResult.ok();
     }
 

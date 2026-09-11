@@ -25,6 +25,16 @@ public final class Parties {
     }
 
     @NotNull
+    public static PartyManager manager(@NotNull PartyOptions options, @NotNull Clock clock, @NotNull PartyStore store) {
+        return PartyManager.create(options, clock, store);
+    }
+
+    @NotNull
+    public static PartyStore inMemoryStore() {
+        return PartyStore.inMemory();
+    }
+
+    @NotNull
     public static PartyOptions options() {
         return PartyOptions.defaults();
     }

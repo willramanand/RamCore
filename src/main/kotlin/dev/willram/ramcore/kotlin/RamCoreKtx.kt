@@ -238,3 +238,26 @@ fun integrationRegistry(): IntegrationRegistry = Integrations.registry()
 fun standardIntegrations(): IntegrationRegistry = Integrations.standard()
 
 fun standardIntegrations(detector: PluginDetector): IntegrationRegistry = Integrations.standard(detector)
+
+// ---- stores (task 1.1) ----
+
+fun <K : Any, V : Any> inMemoryStore(): dev.willram.ramcore.store.InMemoryStore<K, V> =
+    dev.willram.ramcore.store.Stores.inMemory()
+
+fun <K : Any, V : Any> dev.willram.ramcore.store.Store<K, V>.cached(): dev.willram.ramcore.store.CachedStore<K, V> =
+    dev.willram.ramcore.store.Stores.cached(this)
+
+inline fun <reified V : Any> jsonStoreByUuid(directory: java.nio.file.Path): dev.willram.ramcore.store.FileStore<java.util.UUID, V> =
+    dev.willram.ramcore.store.Stores.jsonByUuid(directory, V::class.java)
+
+inline fun <reified V : Any> jsonStoreByString(directory: java.nio.file.Path): dev.willram.ramcore.store.FileStore<String, V> =
+    dev.willram.ramcore.store.Stores.jsonByString(directory, V::class.java)
+
+fun <V : Any> migrations(configure: dev.willram.ramcore.store.StoreMigrations<V>.() -> dev.willram.ramcore.store.StoreMigrations<V>): dev.willram.ramcore.store.StoreMigrations<V> =
+    dev.willram.ramcore.store.StoreMigrations.start<V>().configure()
+
+fun partyManager(options: PartyOptions, store: dev.willram.ramcore.party.PartyStore): PartyManager =
+    PartyManager.create(options, java.time.Clock.systemUTC(), store)
+
+fun objectiveTracker(store: dev.willram.ramcore.objective.ObjectiveProgressStore): ObjectiveTracker =
+    ObjectiveTracker.create(store)

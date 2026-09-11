@@ -31,6 +31,11 @@ public final class InMemoryLootInstanceStore implements LootInstanceStore {
         return instance;
     }
 
+    /** Inserts an instance without notifying listeners; used when restoring persisted instances. */
+    void restore(@NotNull LootInstance instance) {
+        this.instances.put(Objects.requireNonNull(instance, "instance").id(), instance);
+    }
+
     @Override
     @NotNull
     public Optional<LootInstance> get(@NotNull UUID instanceId) {
