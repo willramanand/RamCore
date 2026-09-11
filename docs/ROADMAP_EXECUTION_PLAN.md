@@ -378,7 +378,10 @@ Phase D tasks get a short design here and a full `docs/API.md` design pass when 
 
 **Phase D gate:** all Phase D tasks (3.6, 3.4, 3.3, 3.1, 3.5, 3.7, 3.8, 3.2) plus examples are complete; `./gradlew build` is green across all modules. Live Paper/Folia smoke tests of the example remain a manual pre-release step (cannot run a server in this environment).
 
-### 3.9 Ability targeting and telegraphs — **L** (post-Phase-D follow-up; specced 2026-09-11)
+### 3.9 Ability targeting and telegraphs — **L** (post-Phase-D follow-up; specced 2026-09-11) — **DONE 2026-09-11**
+
+**Outcome.** All 3 PRs on `feat/3.9-ability-targeting`. PR1: `AbilityTargets.rayTrace/cone/nearestInCone/beam/groundRadius` over pure, unit-tested `AbilityGeometry` (cone/beam predicates); added `paper-api` as `testImplementation` to `ramcore-api`. PR2: `ability.telegraph` package — `Telegraph`/`Telegraphs` (ring/cone/line/blockMarker particle shapes, `glow` lock-on, `all`), `Ability.builder.telegraph(...)` + `AbilityCaster` show/clear lifecycle. PR3: `AbilityAiming` interactive aim (render/glow/timeout on the player scheduler, confirm/cancel via `Events`, `Promise<List<LivingEntity>>` result), `/sample aim`, API.md + MODULE_BOUNDARIES docs. Full build green; all additive, experimental, Folia-safe rendering.
+
 
 Motivation: 3.3 shipped only `AbilityTargets.self/none/radius/nearest/lookingAt`. Real combat needs forgiving aim and player-visible target feedback. Everything here is server-side (no client mod): world-space particles/displays, entity glow, and action/boss bar — never a real HUD crosshair. Keep **target resolution** (who/where) separate from **telegraph** (showing it). Folia: targeting reads live state on the player thread; all rendering runs on the entity/region scheduler. Stability: **experimental**. All additive over 3.3.
 
