@@ -71,7 +71,10 @@ class SamplePlugin : RamPlugin() {
                 .node(
                     DialogueNode.builder("root", "<yellow>Welcome, traveller. Care for a quest?")
                         .choice(DialogueChoice.of("<green>Accept", "accept"))
-                        .choice(DialogueChoice.of("<red>Not now", null))
+                        .choice(
+                            DialogueChoice.of("<red>Not now", null)
+                                .withActions(listOf(DialogueActions.message("<gray>Maybe another time."))),
+                        )
                         .build(),
                 )
                 .node(
