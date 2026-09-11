@@ -134,6 +134,11 @@ fun Commands.register(vararg specs: CommandSpec): Set<String> =
 fun Commands.register(vararg modules: CommandModule): Set<String> =
     RamCommands.register(this, *modules)
 
+/**
+ * Adds a subcommand. Prefer this (and [arg]) in Kotlin over the Java members
+ * `literal(String, Consumer)` / `argument(..., Consumer)`: those bind `it` to the node rather than
+ * making it the receiver, so `executes {}` would wrongly target the parent.
+ */
 fun CommandSpec.subcommand(name: String, configure: CommandSpec.Node.() -> Unit): CommandSpec {
     literal(name).configure()
     return this
@@ -338,3 +343,36 @@ fun contentLoad(root: java.nio.file.Path): dev.willram.ramcore.content.ContentLo
 /** Builds a SpecLoader and loads a directory: `contentLoader(dir) { deserializer("items", ItemSpec::deserialize) }`. */
 fun contentLoader(root: java.nio.file.Path, configure: dev.willram.ramcore.content.SpecLoader.() -> Unit): dev.willram.ramcore.content.SpecLoadResult =
     dev.willram.ramcore.content.SpecLoader.create().apply(configure).load(root)
+
+// ---- Kotlin aliases for Java members whose names are Kotlin hard keywords ----
+// Kotlin callers would otherwise need backticks (`when`(...) / `object`()). These keep the Java API
+// unchanged and give Kotlin consumers keyword-free names.
+
+/** Alias for `RewardEntry.when(..)` (Kotlin keyword). */
+fun dev.willram.ramcore.reward.RewardEntry.onlyIf(
+    condition: java.util.function.Predicate<dev.willram.ramcore.reward.RewardContext>
+): dev.willram.ramcore.reward.RewardEntry = `when`(condition)
+
+/** Alias for `LootEntry.when(..)` (Kotlin keyword). */
+fun dev.willram.ramcore.loot.LootEntry.onlyIf(
+    condition: java.util.function.Predicate<dev.willram.ramcore.loot.LootContext>
+): dev.willram.ramcore.loot.LootEntry = `when`(condition)
+
+/** Alias for `LootPool.Builder.when(..)` (Kotlin keyword). */
+fun dev.willram.ramcore.loot.LootPool.Builder.onlyIf(
+    condition: dev.willram.ramcore.loot.LootCondition
+): dev.willram.ramcore.loot.LootPool.Builder = `when`(condition)
+
+/** Alias for `LootPoolEntry.Builder.when(..)` (Kotlin keyword). */
+fun dev.willram.ramcore.loot.LootPoolEntry.Builder.onlyIf(
+    condition: dev.willram.ramcore.loot.LootCondition
+): dev.willram.ramcore.loot.LootPoolEntry.Builder = `when`(condition)
+
+/** Alias for `RegionRule.when(..)` (Kotlin keyword). */
+fun dev.willram.ramcore.region.RegionRule.onlyIf(
+    condition: java.util.function.Predicate<dev.willram.ramcore.region.RegionQuery>
+): dev.willram.ramcore.region.RegionRule = `when`(condition)
+
+/** Alias for `JsonBuilder.object()` (Kotlin keyword). */
+fun jsonObject(): dev.willram.ramcore.gson.JsonBuilder.JsonObjectBuilder =
+    dev.willram.ramcore.gson.JsonBuilder.`object`()
