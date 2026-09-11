@@ -2633,6 +2633,29 @@ npcSpec.onClick(Dialogues.onClick(quest));
 
 Config dialogues (`dialogues` type) cover node text, choices, `permission` conditions, and `messages`/`commands` actions; reward/menu/custom actions are code-supplied via the builder. Runs on the player's thread. Stability: **experimental**.
 
+## Hot-Reloadable Content
+
+Package: `dev.willram.ramcore.reload`
+
+Reloads content packs at runtime and rebuilds the live objects built from them, without a server restart.
+
+Primary types:
+
+- `ContentSnapshot` (id → node hash via `ContentHashing`, from a `ContentLoadResult`) and `ContentDiff(added, removed, changed, brokenReferences, rebuilt, failed, errors)` (`ContentDiff.data` computes the data diff; `withRebuild` fills rebuild results).
+- `TemplateBound` — a live object: `templateId()`, `rebind(resolved)`, and an `owner()` scheduler (entity/region/global). Register instances in a `LiveObjectRegistry`.
+- `ContentPack(name, root, ContentResolver)` — `ContentResolver` turns a reloaded `ContentDefinition` into the domain object for rebinding.
+- `ContentReloadService.reload(pack | name) -> Promise<ContentDiff>` — reruns `ContentLoader` off-thread, diffs against the pack's previous snapshot, resolves added/changed definitions, and dispatches each affected live object's `rebind` to its owner scheduler. Failures are collected, never thrown: `diff.failed` lists resolution failures; a rebind that throws on its owner thread is caught and logged.
+
+`RamCore` exposes a shared service via `RamCore.reloadService()`; register your `ContentPack`s there and `/ramcore diagnostics reload <pack>` prints the resulting diff. Stability: **experimental**.
+
+```java
+ContentReloadService reload = ((RamCore) getServer().getPluginManager().getPlugin("RamCore")).reloadService();
+reload.register(new ContentPack("myplugin",
+        getDataFolder().toPath().resolve("content"),
+        def -> ItemSpec.deserialize(def.node())));
+reload.liveObjects().register(myLiveNpc); // implements TemplateBound
+```
+
 ## Attribute And Combat Helpers
 
 Package: `dev.willram.ramcore.combat`
@@ -2913,6 +2936,7 @@ Stability: experimental.
 | `stat` | Custom stat definitions, per-player modifier sources, cached snapshots, and the item stat map. |
 | `ability` | Ability definitions, per-player caster state machine, triggers, and channel/interrupt/combo extensions. |
 | `dialogue` | Branching dialogue graph, per-player sessions, and chat/menu presentation. |
+| `reload` | Content snapshot/diff and hot-reload of live template-bound objects. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |
