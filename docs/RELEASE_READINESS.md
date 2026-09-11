@@ -10,6 +10,16 @@ This file records release checks that are not fully covered by unit tests.
 
 Paper documents Java 25 as the recommended runtime for `26.1+`, so RamCore 2.0 can intentionally require Java 25 for downstream consumers.
 
+## Module Checklist
+
+Since 2.2 the build is Gradle (Kotlin DSL) and split into modules. Before a release:
+
+- [ ] `./gradlew build` is green (compiles every module and runs all tests).
+- [ ] `ramcore-api` compiles standalone (`./gradlew :ramcore-api:build`) and `ApiBoundaryTest` passes, proving no implementation-module or platform-internal imports leaked into the API.
+- [ ] The shaded `ramcore-paper/build/libs/RamCore-<version>.jar` contains all modules' classes, the relocated libraries (configurate, snakeyaml, typesafe config, flowpowered math), the `META-INF/services` integration-provider file, and no provided dependencies (paper-api, HikariCP, ProtocolLib, Vault, PlaceholderAPI).
+- [ ] Consumable modules publish: `./gradlew :ramcore-api:publishToMavenLocal` (and `-nms`, `-protocol`, `-kotlin`, `-test`) produce a jar, sources jar and pom.
+- [ ] Live smoke test on Paper and Folia with the shaded jar (currently manual; `run-paper` / `run-folia` Gradle wiring is a follow-up).
+
 ## Server Smoke Tests
 
 Latest local smoke run:

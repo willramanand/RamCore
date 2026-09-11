@@ -1,0 +1,6 @@
+# JitPack builds RamCore's library modules. Gradle 8.8 runs on JDK 21 and
+# provisions the Java 25 toolchain via the foojay resolver.
+jdk:
+  - openjdk21
+install:
+  - ./gradlew :ramcore-api:publishToMavenLocal :ramcore-nms:publishToMavenLocal :ramcore-protocol:publishToMavenLocal :ramcore-kotlin:publishToMavenLocal :ramcore-test:publishToMavenLocal

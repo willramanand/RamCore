@@ -22,11 +22,57 @@ RamCore tracks the current Paper major line only ([ADR-0001](docs/decisions/ADR-
 
 ## Building
 
-Requires a JDK 25 on `JAVA_HOME`; the build emits Java 25 bytecode and fails on older JDKs even if one is on `PATH`.
+The build is Gradle (Kotlin DSL) and emits Java 25 bytecode ([ADR-0002](docs/decisions/ADR-0002-build-tool.md)). Gradle 8.8 runs on JDK 21 and compiles with a Java 25 toolchain, which it provisions automatically when no local JDK 25 is found.
 
 ```sh
-export JAVA_HOME=/path/to/jdk-25
-mvn -B verify
+./gradlew build
 ```
 
-The shaded plugin jar is written to `target/RamCore-<version>.jar`. CI runs the same command on every push and pull request.
+The shaded plugin jar is written to `ramcore-paper/build/libs/RamCore-<version>.jar`; it is a single relocated artifact identical in shape to the previous Maven output. Run all tests with `./gradlew test`. A live Paper/Folia smoke test remains a manual step (see [release readiness](docs/RELEASE_READINESS.md)).
+
+## Modules
+
+RamCore is split into library modules plus the runtime plugin:
+
+| Module | Role |
+| --- | --- |
+| `ramcore-api` | The public API and most implementations; compiles against Paper API only |
+| `ramcore-nms` | Version-sensitive NMS reflection helpers |
+| `ramcore-protocol` | ProtocolLib-backed packet, scoreboard and protocol event support |
+| `ramcore-kotlin` | Kotlin extensions and DSLs |
+| `ramcore-test` | Test-support fakes (`FakeScheduler`, proxy fakes, `FakeClock`) |
+| `ramcore-paper` | The plugin main; shades the others into the runtime jar |
+
+## Consuming RamCore
+
+Published via [JitPack](https://jitpack.io). Depend on the module you need (usually `ramcore-api`, plus `ramcore-test` for tests).
+
+Gradle (Kotlin DSL):
+
+```kotlin
+repositories {
+    maven("https://jitpack.io")
+}
+dependencies {
+    compileOnly("com.github.willramanand.RamCore:ramcore-api:<tag>")
+    testImplementation("com.github.willramanand.RamCore:ramcore-test:<tag>")
+}
+```
+
+Maven:
+
+```xml
+<repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+</repository>
+
+<dependency>
+    <groupId>com.github.willramanand.RamCore</groupId>
+    <artifactId>ramcore-api</artifactId>
+    <version>TAG</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+Publishing to GitHub Packages via `maven-publish` is the alternative to JitPack; the modules already apply `maven-publish` (except `ramcore-paper`), so `./gradlew publish` with a configured repository works too. Runtime consumers just install the shaded `RamCore-<version>.jar` as a plugin; only plugins compiling against the API need the JitPack dependency.

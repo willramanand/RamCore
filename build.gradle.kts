@@ -41,4 +41,16 @@ subprojects {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
+
+    // Every module except the shaded runtime plugin is a consumable library (JitPack / Maven).
+    if (name != "ramcore-paper") {
+        apply(plugin = "maven-publish")
+        extensions.configure<PublishingExtension> {
+            publications {
+                create<MavenPublication>("maven") {
+                    from(components["java"])
+                }
+            }
+        }
+    }
 }
