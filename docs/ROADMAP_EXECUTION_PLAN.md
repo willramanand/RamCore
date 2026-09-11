@@ -310,6 +310,8 @@ Stability: **experimental**. Docs: Kotlin Extensions section gains "Coroutines".
 
 Stability: bStats/update checker **stable**; `MessageBus` **experimental**.
 
+**Outcome (done 2026-09-10, three commits on `phase/c-engineering-quality`).** PR1: `messaging` package (MessageBus/MessageHandler/MessageCodec, InMemoryMessageBus, PluginMessagingBus; RedisMessageBus via Lettuce compileOnly in ramcore-paper), handlers on the async scheduler; 6 tests. PR2: `SemVer` + `UpdateChecker` (pure extractTag/evaluate, isolated async HttpClient GitHub call, one log line, never downloads); 5 tests. PR3: `RamCoreConfig` (config.yml: metrics/update-checker/storage.sql/messaging.redis), bStats 3.0.2 shaded and relocated to `dev.willram.ramcore.libs.bstats` (id 33973, `metrics.enabled` opt-out, server-type/redis/sql charts), wired into `RamCore.load()`/`enable()` with the update check; 2 config tests. Deviations: Lettuce/bStats resolved over the network (not cached); MessageBus lives in api with RedisMessageBus in paper; parties/cooldowns MessageBus hooks deferred as the plan said. Full build 400 tests green; bStats and kotlinx relocated with no leaks.
+
 ### 2.6 Version support decision — done in Phase 0 (ADR-0001)
 
 Only remaining work: the README/`MODULE_BOUNDARIES.md` policy paragraph and, if (b) was chosen, the adapter isolation work listed in ADR-0001.

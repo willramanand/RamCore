@@ -896,6 +896,14 @@ Params: `party_size`, `party_leader`, `cooldown_<name>_<key>` (remaining seconds
 
 `RegionTracker` (package `dev.willram.ramcore.region`) tracks which `RuleRegion`s each player stands in and fires `RegionEnterEvent`/`RegionExitEvent` on transitions. Register it as a listener and bind it; it watches move (block-change only), teleport, world change, join and quit. `RegionRuleEngine.regionsAt(position)` lists containing regions highest-priority first, and `region(id)` looks one up. The transition logic (`transition(playerId, player, position)`, `clear(playerId, player)`) is separable from Bukkit wiring, so it is tested directly with positions and a custom `TransitionHandler`. Folia: the move event runs on the player's region; the current sets live in a concurrent map.
 
+## Operational
+
+Packages: `dev.willram.ramcore.messaging`, `dev.willram.ramcore.update`; config in `ramcore-paper` (`RamCoreConfig`).
+
+RamCore ships a `config.yml` (loaded in `RamCore.load()`) with `metrics.enabled` (true), `update-checker.enabled`/`update-checker.repo`, `storage.sql.*` and `messaging.redis.*`. bStats (plugin id 33973, shaded and relocated) starts on enable unless `metrics.enabled` is false, with server-type/redis/sql custom charts. On enable it also runs `UpdateChecker.check(version, repo)` once on the async scheduler: it reads the latest GitHub release tag, compares with `SemVer`, logs one line, and never downloads.
+
+`MessageBus` (experimental) is a publish/subscribe bus: `publish(channel, bytes)` / `subscribe(channel, handler)` plus typed variants via `MessageCodec`. Handlers run on the async scheduler. Implementations: `InMemoryMessageBus` (single JVM), `PluginMessagingBus` (Bukkit plugin channels; needs an online player), `RedisMessageBus` (Lettuce, runtime-resolved per ADR-0003). Stability: bStats/update checker stable; MessageBus experimental.
+
 ## Commands
 
 Package: `dev.willram.ramcore.commands`
