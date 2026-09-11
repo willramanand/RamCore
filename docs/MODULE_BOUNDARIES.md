@@ -28,6 +28,7 @@ RamCore 2.0 keeps public APIs small, scheduler-aware, and explicit about platfor
 | Item NBT | `item.nbt` | Platform adapter | NMS-backed where raw SNBT is used | Binary/meta/PDC snapshots are safe; raw SNBT requires capability checks. |
 | Resource packs | `resourcepack` | Core | Stable | Prompt tracking is event-driven and scheduler-safe. |
 | Loot and trades | `loot`, `trade` | Core/gameplay | Stable | Pure generation is safe; world/entity application must schedule. |
+| Stats | `stat` (config type `stats`) | Core/gameplay | Experimental | Snapshots are read on the requesting thread and sources read live equipment, so request them on the player's thread; invalidation listeners run on the event thread. `DamageCalculator` and `StatSnapshot` are pure. |
 | Diagnostics | `diagnostics` | Built-in optional surface | Stable command contract | Enabled by default, permission-gated, and removable with `-Dramcore.diagnostics=false`. |
 | Integrations | `integration` | Optional integration boundary | Stable | Detection is safe; integration-specific calls follow that integration's threading rules. |
 | Protocol and packets | `protocol`, `packet` | Optional integration | Experimental / adapter-backed | Logical state is safe; actual sends require a transport such as ProtocolLib. |

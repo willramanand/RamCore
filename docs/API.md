@@ -2506,6 +2506,35 @@ NmsCapabilityCheck control = nms.check(NmsCapability.ENTITY_CONTROL);
 
 `ENTITY_CONTROL` is reported as partial Paper API support. Paper covers common entity flags, target selection, pickup rules, equipment drops, attributes, and spawning. Raw movement controllers and version-specific anger internals should stay behind future adapters.
 
+## Stats
+
+Package: `dev.willram.ramcore.stat` (config type `stats` via `content.spec.StatSpec`)
+
+A custom stat system: definitions in a registry, per-player modifiers gathered from pluggable sources, and cached immutable snapshots. It is data-only and Bukkit-light; combat consumes it through `DamageCalculator`.
+
+Primary types:
+
+- `Stat(ContentId id, double base, double min, double max, StatFormat)` — a definition with a clamp range and a display format (`INTEGER`, `DECIMAL`, `PERCENT`). `StatSpec` (config type `stats`) deserializes one and `toStat(id)` converts it.
+- `StatRegistry` — owner-scoped registry backed by `ContentRegistry<Stat>`.
+- `StatModifier(ContentId statId, StatOperation, double amount, String sourceKey)` — one contribution; `StatOperation` is `ADD` or `MULTIPLY` (a fraction: `0.10` = +10%).
+- `StatSource` — `Collection<StatModifier> modifiers(Player)`. Built-ins: `ItemStatSource` (reads the `ramcore:stats` PDC map, written with `ItemStackBuilder.stat(id, amount)` / `ItemStats`), `BuffStatSource` (timed, `Terminable`, `onChange` callback), `PartyStatSource` (an extractor over `PartyManager.partyOf`), `RegionStatSource` (modifiers keyed by region id, gated on `RegionTracker` membership from task 1.5).
+- `StatSnapshot` — immutable computed values. For each registered stat: `base` + Σ`ADD`, then `× (1 + Σ MULTIPLY)`, then clamp. Modifiers for unregistered stats are ignored.
+- `StatService` — collects sources and caches one snapshot per player. `install(RamPlugin, StatRegistry)` registers it under `StatService.KEY` and installs the invalidation listener (`PlayerItemHeldEvent`, `PlayerArmorChangeEvent`, evict on quit); buff/party changes invalidate through their source `onChange`. `create(StatRegistry)` gives a listener-free service for tests.
+
+Example:
+
+```java
+StatRegistry stats = new StatRegistry();
+stats.register("example", new Stat(ContentId.of("example", "power"), 10.0, 0.0, 100.0, StatFormat.INTEGER));
+
+StatService service = StatService.install(plugin, stats); // from load()
+service.addSource(new ItemStatSource());
+
+double power = service.snapshot(player).value(ContentId.of("example", "power"));
+```
+
+Thread contract: a snapshot is read on the thread that calls `snapshot(Player)`, and sources read live equipment, so request snapshots on the player's thread. Stability: **experimental**.
+
 ## Attribute And Combat Helpers
 
 Package: `dev.willram.ramcore.combat`
@@ -2520,6 +2549,7 @@ Primary types:
 - `AttributeBuff` applies an attribute spec temporarily and restores previous base values and same-key modifiers when closed.
 - `CombatProfile` groups common mob combat attributes such as movement speed, follow range, armor, armor toughness, scale, safe fall distance, gravity, step height, knockback resistance, and interaction reach.
 - `DamageProfile` applies damage with optional damager or `DamageSource`, no-damage-tick clearing, post-damage invulnerability ticks, and hurt direction.
+- `DamageCalculator` turns a base amount plus attacker/defender `StatSnapshot`s into a `DamageBreakdown` (crit, elemental resistance, flat defense, lifesteal) reading the standard `CombatStats` ids. `DamageProfile.Builder.withStats(attacker, defender[, element])` runs it, sets the amount to the mitigated result, and records the breakdown (`DamageProfile.breakdown()`, used for lifesteal). Callers that never call `withStats` are unaffected. Pass `.calculator(..)` for deterministic crits; the calculator itself is pure and unit-testable off-server.
 
 Example:
 
@@ -2559,6 +2589,21 @@ CombatControls.damage(8.0)
         .hurtDirection(180.0f)
         .build()
         .apply(target);
+```
+
+Stat-driven damage:
+
+```java
+DamageProfile profile = CombatControls.damage(8.0)
+        .damager(attacker)
+        .withStats(stats.snapshot(attacker), stats.snapshot(target), "fire")
+        .build();
+profile.apply(target);
+profile.breakdown().ifPresent(b -> {
+    if (b.lifestealHealed() > 0 && attacker instanceof LivingEntity living) {
+        living.setHealth(Math.min(living.getHealth() + b.lifestealHealed(), maxHealth));
+    }
+});
 ```
 
 NMS capability reporting:
@@ -2767,6 +2812,7 @@ Stability: experimental.
 | `reward` | Generic reward validation, preview, and execution pipeline. |
 | `scheduler` | Paper/Folia-aware scheduling and task contexts. |
 | `selector` | Reusable collection-based player and entity selectors. |
+| `stat` | Custom stat definitions, per-player modifier sources, cached snapshots, and the item stat map. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |
