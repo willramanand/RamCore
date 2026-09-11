@@ -36,6 +36,10 @@ subprojects {
 
     dependencies {
         "testImplementation"("org.junit.jupiter:junit-jupiter:$junitVersion")
+        // Gradle 9 no longer puts the JUnit Platform launcher on the test runtime classpath
+        // automatically (IntelliJ's bundled Gradle is 9.x); add it explicitly so tests run on
+        // both the 8.8 wrapper and Gradle 9+.
+        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher:1.11.4")
     }
 
     tasks.withType<Test>().configureEach {
