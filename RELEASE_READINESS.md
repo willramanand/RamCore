@@ -3,8 +3,11 @@
 Status of the Phase D (gameplay platform) definition-of-done scenarios, demonstrated by
 `examples/sample-plugin` (`dev.willram.ramcore.example.SamplePlugin`).
 
-The example module is included in the Gradle build so its API usage stays compilable
-(`./gradlew :examples:sample-plugin:compileJava`); it ships nothing. Live server smoke tests must be
+The example ships in two forms — `examples/sample-plugin` (Java) and `examples/sample-plugin-kotlin`
+(Kotlin, using the RamCore command DSL and SAM APIs) — both included in the Gradle build so their API
+usage stays compilable (`./gradlew :examples:sample-plugin:compileJava`,
+`./gradlew :examples:sample-plugin-kotlin:compileKotlin`); they ship nothing. The Kotlin twin also
+needs the Kotlin stdlib on the server at runtime. Live server smoke tests must be
 run manually against a Paper and a Folia server (26.1) — automated tests cover each subsystem's logic
 off-server (see the per-task `Outcome` notes in `docs/ROADMAP_EXECUTION_PLAN.md`).
 

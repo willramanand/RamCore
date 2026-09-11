@@ -19,5 +19,6 @@ include(
     "ramcore-kotlin",
     "ramcore-test",
     "ramcore-paper",
-    "examples:sample-plugin"
+    "examples:sample-plugin",
+    "examples:sample-plugin-kotlin"
 )
