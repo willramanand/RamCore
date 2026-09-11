@@ -1235,6 +1235,14 @@ Rules the fake mirrors from the server backend: immediate global work runs inlin
 
 Off-server, `RamExceptions` logs through `RamLog`, which falls back to a plain JDK logger when no plugin is bound, and skips firing `RamExceptionEvent`.
 
+## Session Recorder
+
+Package: `dev.willram.ramcore.session`. Stability: stable command contract; Folia-safe (per-player concurrent ring buffers).
+
+`SessionRecorder` keeps a bounded, per-player timeline of `SessionEvent(tick, at, type, detail)` for diagnostics. `SessionRecorder.NOOP` is the disabled instance, so instrumentation call sites stay free; `SessionRecorder.ring(capacity[, clock, tick])` is the live one (fixed-size array per player, no map allocation on the hot path). Subsystems call `record(uuid, type, detail)`; `timeline(uuid, n)` returns the last n events oldest-first. `SessionTimelines.lines(events)` formats them, and the command runs the result through `DiagnosticExporter.safeLines`.
+
+Enable with `diagnostics.timeline.enabled` (false by default); when on, `RamCore` installs a ring recorder and `/ramcore diagnostics timeline <player> [n]` prints it. The instrumentation hook-ups from other subsystems (rewards, loot, objectives, cooldown denials, region enter/exit, menu open, ability casts) are the follow-up; the recorder API is the integration point.
+
 ## Diagnostics
 
 Package: `dev.willram.ramcore.diagnostics`

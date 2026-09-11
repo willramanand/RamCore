@@ -14,6 +14,7 @@ public final class RamCoreConfig {
     public static final ConfigKey<Boolean> METRICS_ENABLED = ConfigKey.of("metrics.enabled", Boolean.class, true);
     public static final ConfigKey<Boolean> UPDATE_ENABLED = ConfigKey.of("update-checker.enabled", Boolean.class, true);
     public static final ConfigKey<String> UPDATE_REPO = ConfigKey.of("update-checker.repo", String.class, "willramanand/RamCore");
+    public static final ConfigKey<Boolean> TIMELINE_ENABLED = ConfigKey.of("diagnostics.timeline.enabled", Boolean.class, false);
     public static final ConfigKey<Boolean> SQL_ENABLED = ConfigKey.of("storage.sql.enabled", Boolean.class, false);
     public static final ConfigKey<String> SQL_URL = ConfigKey.of("storage.sql.url", String.class, "jdbc:sqlite:plugins/RamCore/data.db");
     public static final ConfigKey<String> SQL_USERNAME = ConfigKey.of("storage.sql.username", String.class, "");
@@ -29,7 +30,7 @@ public final class RamCoreConfig {
     @NotNull
     public static List<ConfigKey<?>> keys() {
         return List.of(
-                METRICS_ENABLED, UPDATE_ENABLED, UPDATE_REPO,
+                METRICS_ENABLED, UPDATE_ENABLED, UPDATE_REPO, TIMELINE_ENABLED,
                 SQL_ENABLED, SQL_URL, SQL_USERNAME, SQL_PASSWORD, SQL_POOL_SIZE,
                 REDIS_ENABLED, REDIS_URI
         );
