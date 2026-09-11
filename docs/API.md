@@ -2633,6 +2633,28 @@ npcSpec.onClick(Dialogues.onClick(quest));
 
 Config dialogues (`dialogues` type) cover node text, choices, `permission` conditions, and `messages`/`commands` actions; reward/menu/custom actions are code-supplied via the builder. Runs on the player's thread. Stability: **experimental**.
 
+## Real-Time And Cron Scheduling
+
+Package: `dev.willram.ramcore.schedule`
+
+Runs jobs on wall-clock time — cron, fixed interval, or daily — Folia-aware and restart-safe.
+
+Primary types:
+
+- `Schedule` — `nextAfter(Instant, ZoneId)`; built-ins `cron(String)` (an in-house 5-field parser, `CronExpression`, no dependency), `every(Duration)`, `at(LocalTime)`.
+- `Job(id, Schedule, ZoneId, MissedRunPolicy, TaskContext, Runnable)` — the task runs on its declared `TaskContext`. `MissedRunPolicy` is `skip()` or `catchUp(max)`. `JobState(lastRun, nextRun)` (epoch millis) is the persistable timing state.
+- `RealTimeScheduler` — a once-per-second async ticker computes due jobs and runs each on its context; `register(job)` / `register(job, previousState)` (the latter applies the missed-run policy for the gap since `lastRun`). Uses an injectable `Clock`.
+
+State is held in memory; persist `JobState` in a `Store<String, JobState>` and seed `register(job, state)` at startup to survive restarts. `tick(now)` is public for deterministic tests. Stability: **experimental**.
+
+```java
+RealTimeScheduler scheduler = new RealTimeScheduler();
+scheduler.register(new Job("daily-reset",
+        Schedule.cron("0 4 * * *"), ZoneId.of("UTC"), MissedRunPolicy.catchUp(1),
+        TaskContext.global(), () -> resetDailies()));
+scheduler.start();
+```
+
 ## Hot-Reloadable Content
 
 Package: `dev.willram.ramcore.reload`
@@ -2937,6 +2959,7 @@ Stability: experimental.
 | `ability` | Ability definitions, per-player caster state machine, triggers, and channel/interrupt/combo extensions. |
 | `dialogue` | Branching dialogue graph, per-player sessions, and chat/menu presentation. |
 | `reload` | Content snapshot/diff and hot-reload of live template-bound objects. |
+| `schedule` | Real-time cron/interval/daily job scheduling with an in-house cron parser. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |
