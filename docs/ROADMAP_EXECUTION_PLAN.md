@@ -374,6 +374,10 @@ Phase D tasks get a short design here and a full `docs/API.md` design pass when 
 
 `examples/sample-plugin` (separate module, not part of the default build): config-loaded custom item with generated pack (1.6 + 3.1), a player ability using a custom stat (3.3 + 3.4), an NPC dialogue that starts an objective (3.5), a party entering an instanced dungeon (3.2), a reward paid through the Vault bridge (1.5). Smoke-tested on Paper and Folia via `run-paper`/`run-folia` (or manually if Maven was kept); results recorded in `RELEASE_READINESS.md`.
 
+**Outcome (done 2026-09-11, commit `17d753f` on `phase/d-gameplay`).** `examples/sample-plugin` (`SamplePlugin` extending `RamPlugin`) demonstrates all five DoD scenarios via `/sample cast|talk|dungeon|pack`: custom stat + ability (3.4/3.3), dialogue (3.5), instanced dungeon (3.2), generated pack (3.1); reward-via-Vault is a documented dialogue-action hook. Deviation: the module IS included in `settings.gradle.kts` (against the "not part of the default build" note) so its API usage stays compilable and cannot rot — it produces only an example jar and ships nothing. `RELEASE_READINESS.md` tracks each scenario's automated coverage and its pending Paper/Folia manual smoke test (instanced worlds are Paper-only; Folia verifies the actionable refusal). Full build green.
+
+**Phase D gate:** all Phase D tasks (3.6, 3.4, 3.3, 3.1, 3.5, 3.7, 3.8, 3.2) plus examples are complete; `./gradlew build` is green across all modules. Live Paper/Folia smoke tests of the example remain a manual pre-release step (cannot run a server in this environment).
+
 ---
 
 ## 9. Decisions (made 2026-09-10)
