@@ -378,6 +378,27 @@ Phase D tasks get a short design here and a full `docs/API.md` design pass when 
 
 **Phase D gate:** all Phase D tasks (3.6, 3.4, 3.3, 3.1, 3.5, 3.7, 3.8, 3.2) plus examples are complete; `./gradlew build` is green across all modules. Live Paper/Folia smoke tests of the example remain a manual pre-release step (cannot run a server in this environment).
 
+### 3.9 Ability targeting and telegraphs — **L** (post-Phase-D follow-up; specced 2026-09-11)
+
+Motivation: 3.3 shipped only `AbilityTargets.self/none/radius/nearest/lookingAt`. Real combat needs forgiving aim and player-visible target feedback. Everything here is server-side (no client mod): world-space particles/displays, entity glow, and action/boss bar — never a real HUD crosshair. Keep **target resolution** (who/where) separate from **telegraph** (showing it). Folia: targeting reads live state on the player thread; all rendering runs on the entity/region scheduler. Stability: **experimental**. All additive over 3.3.
+
+`dev.willram.ramcore.ability` targeting additions (still `AbilityTargeting` functional impls in `AbilityTargets`):
+- `rayTrace(range, raySize)` — single entity via `World.rayTraceEntities` with an aim-assist ray size (upgrade of `lookingAt`, which uses strict `getTargetEntity`).
+- `cone(range, angleDeg)` — living entities within an angle of the caster's look direction (dot-product of normalized look vs `(target-eye)`); optional `nearestInCone` variant.
+- `groundBlock(range)` / `groundRadius(range, radius)` — ray-trace to a block (`getTargetBlockExact`) then optionally the living entities within `radius` of that point (ground-targeted AoE).
+- `beam(range, width)` — entities within `width` of the look ray (line AoE).
+  Geometry (cone dot-product, ground radius, beam distance-to-line) is pure and unit-testable; entity queries need a world (proxied/live).
+
+Telegraph (new `dev.willram.ramcore.ability.telegraph` or reuse `presentation`/`display`):
+- `Telegraph` functional interface: `Terminable show(Player caster)` — renders a preview and returns a `Terminable` that clears it.
+- `Telegraphs` built-ins driven by particles (and optionally a `display`-package block/text-display marker): `ring(radius)`, `cone(range, angleDeg)`, `line(range)`, `blockMarker(location)`. Redraw each tick.
+- Channel integration: an `AbilityChannel` whose `ChannelTick` renders the telegraph each tick and whose completion fires the effect — the aim preview for free. Add `Ability.builder.telegraph(Telegraph)` sugar or a `ChannelTick` factory `Telegraphs.channel(telegraph, targeting)`.
+- Lock-on feedback: temporarily `setGlowing(true)` on resolved targets during aim, restored via the returned `Terminable` (server-side highlight; the only in-world entity outline without a client mod).
+
+Interactive aim mode (richest UX): `AbilityAiming.begin(player, targeting, telegraph)` enters an "aiming" state — a per-player `runTimer` on the player scheduler updates the telegraph + glow as they look, confirm on click/swap-hands (reuse `AbilityTriggerModule` events), cancel on move/timeout; on confirm resolve targets and cast. Returns a `Terminable`/`Promise<AbilityContext>`.
+
+PR cut: **PR1** targeters (`rayTrace`/`cone`/`groundRadius`/`beam`) + pure geometry tests. **PR2** `Telegraph`/`Telegraphs` (particle shapes) + `AbilityChannel` integration + glow lock-on; tests on `FakeScheduler` with proxied players. **PR3** interactive aim mode + docs (API.md Abilities section, MODULE_BOUNDARIES note) + an example in `sample-plugin` (`/sample aim`).
+
 ---
 
 ## 9. Decisions (made 2026-09-10)
