@@ -301,3 +301,16 @@ fun MessageCatalog.Builder.locale(locale: java.util.Locale, block: LocaleMessage
 /** Loads a YAML message bundle from a directory (see MessageCatalogLoader). */
 fun messagesYaml(directory: java.nio.file.Path, baseName: String = "messages", defaultLocale: java.util.Locale = java.util.Locale.US): dev.willram.ramcore.message.MessageCatalogLoader.Bundle =
     dev.willram.ramcore.message.MessageCatalogLoader.yaml(directory, baseName, defaultLocale)
+
+// ---- player input (task 1.4) ----
+
+fun inputRequest(configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit): dev.willram.ramcore.input.InputRequest =
+    dev.willram.ramcore.input.InputRequest.builder().apply(configure).build()
+
+/** Asks this player for text: `player.askText { prompt(msg); timeout(200) }`. */
+fun org.bukkit.entity.Player.askText(configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit = {}): dev.willram.ramcore.promise.Promise<String> =
+    dev.willram.ramcore.input.PlayerInput.request(this, inputRequest(configure))
+
+/** Asks this player for text and parses it; a parse failure consumes a retry. */
+fun <T : Any> org.bukkit.entity.Player.askText(parser: dev.willram.ramcore.input.InputParser<T>, configure: dev.willram.ramcore.input.InputRequest.Builder.() -> Unit = {}): dev.willram.ramcore.promise.Promise<T> =
+    dev.willram.ramcore.input.PlayerInput.request(this, inputRequest(configure), parser)

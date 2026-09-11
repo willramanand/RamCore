@@ -42,6 +42,7 @@ public final class MenuSession implements InventoryHolder, TerminableConsumer, A
     private Inventory inventory;
     private boolean valid;
     private boolean opening;
+    private boolean suspended;
 
     private MenuSession(@NotNull Player player, @NotNull MenuView view) {
         this.player = requireNonNull(player, "player");
@@ -264,10 +265,54 @@ public final class MenuSession implements InventoryHolder, TerminableConsumer, A
             metadata.remove(OPEN_MENU_KEY);
         }
 
-        if (callCloseHandler) {
+        if (callCloseHandler && !this.suspended) {
             this.view.closeHandler().handle(this);
         }
         this.terminables.closeAndReportException();
         this.buttons.clear();
+    }
+
+    /**
+     * Closes this menu, asks the player for text, then reopens a fresh inventory for the same view
+     * with the {@link MenuState} preserved.
+     *
+     * <p>While suspended the close handler is skipped, so the menu is not treated as dismissed. The
+     * menu reopens whether the input succeeds, is cancelled, or times out; the returned promise
+     * carries the input result (failed with {@link InputCancelledException} on cancel/timeout/quit).
+     * The player must still be online to reopen.</p>
+     *
+     * @param request the text request
+     * @return the input result
+     */
+    @NotNull
+    public dev.willram.ramcore.promise.Promise<String> suspend(@NotNull dev.willram.ramcore.input.InputRequest request) {
+        requireNonNull(request, "request");
+        this.suspended = true;
+        close();
+
+        dev.willram.ramcore.promise.Promise<String> result = dev.willram.ramcore.promise.Promise.empty();
+        dev.willram.ramcore.input.PlayerInput.request(this.player, request).toCompletableFuture().whenComplete((value, error) -> {
+            Schedulers.run(this.player, () -> {
+                this.suspended = false;
+                reopen();
+            });
+            if (error != null) {
+                result.supplyException(error instanceof java.util.concurrent.CompletionException && error.getCause() != null ? error.getCause() : error);
+            } else {
+                result.supply(value);
+            }
+        });
+        return result;
+    }
+
+    private void reopen() {
+        if (this.valid || this.opening) {
+            return;
+        }
+        if (!this.player.isOnline()) {
+            invalidate(false);
+            return;
+        }
+        openNow();
     }
 }

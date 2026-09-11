@@ -1682,6 +1682,37 @@ rewards.open(player);
 
 `ITEM_DATA_COMPONENTS` is reported as partial Paper API support through `ItemComponents.registerPaperCapability(...)`. `ITEM_NBT` is reported as partial Paper API support through `ItemNbt.registerPaperCapability(...)`: Bukkit/Paper exposes safe binary item serialization and structured meta/PDC/component inspection, but raw SNBT import/export requires a guarded NMS adapter. The component API is experimental in Paper, so consuming plugins should prefer RamCore patches/profiles over direct `ItemStack#setData(...)` calls when they need a stable boundary.
 
+## Player Input
+
+Package: `dev.willram.ramcore.input`
+
+Stability: **experimental** for `CHAT` and `ANVIL`; `SIGN` is **Paper-experimental** and currently falls back to `CHAT`. Folia: chat arrives on an async thread; every promise completes on the player's scheduler, so continuations may touch the player.
+
+`PlayerInput` asks a player for text and returns a `Promise`. Install the listener once, then request:
+
+```java
+PlayerInput.install(this);   // in RamPlugin.enable(): wires chat/inventory/quit events
+
+PlayerInput.request(player, InputRequest.builder()
+        .prompt(Component.text("Type a name, or 'cancel':"))
+        .timeout(20 * 30)                 // ticks; 0 waits forever
+        .retries(2)
+        .validator(s -> !s.isBlank(), Component.text("Cannot be blank"))
+        .build())
+    .thenAcceptSync(name -> ...)
+    .exceptionallySync(error -> ...);     // InputCancelledException: CANCELLED, TIMEOUT, QUIT, EXHAUSTED, SUPERSEDED, OFFLINE
+```
+
+`request(player, request, InputParser<T>)` parses the text into `T`; a thrown parser exception is a failed attempt and consumes a retry, exactly like a failed validator. `InputRequest.Builder`: `prompt`, `timeout(ticks)`, `cancelWord` (default `cancel`, case-insensitive and trimmed; empty disables it), `retries` (default 0, i.e. one attempt), `validator(predicate, error)`, `backend(InputBackend)`.
+
+`InputSessionRegistry` keeps one active request per player: a new request supersedes the previous (which fails `SUPERSEDED`), and a quit cancels (`QUIT`). Its event-handling methods (`onChat`, `onAnvilClick`, `onInventoryClose`, `onQuit`) are what `InputListener` calls, and what tests call directly with constructed events, so the registry never registers Bukkit listeners itself.
+
+Backends: `CHAT` subscribes at `LOWEST`, captures the plain text and cancels the event, so the message never reaches other chat listeners. `ANVIL` opens an anvil and reads its rename field on a result-slot click. `SIGN` needs virtual-sign packet support that is not wired yet and logs a fallback to `CHAT`.
+
+`MenuSession.suspend(InputRequest)` closes the menu (skipping its close handler), runs the request, then reopens a fresh inventory for the same view with `MenuState` preserved; it returns the input result and reopens whether the input succeeds, cancels or times out.
+
+Kotlin: `player.askText { prompt(msg); timeout(200) }`, `player.askText(parser) { ... }`, `inputRequest { ... }`.
+
 ## World And Blocks
 
 Package: `dev.willram.ramcore.world`
