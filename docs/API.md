@@ -2633,6 +2633,28 @@ npcSpec.onClick(Dialogues.onClick(quest));
 
 Config dialogues (`dialogues` type) cover node text, choices, `permission` conditions, and `messages`/`commands` actions; reward/menu/custom actions are code-supplied via the builder. Runs on the player's thread. Stability: **experimental**.
 
+## Instanced Worlds
+
+Package: `dev.willram.ramcore.worldinstance` (Paper backend in `ramcore-paper`)
+
+Copies a world template to a fresh directory, loads it as a throwaway instance, and tears it down (evacuate → unload → delete) on close.
+
+Primary types:
+
+- `WorldInstanceService.create(templateName, options) -> Promise<WorldInstance>` — copies `world-templates/<name>/` (skipping `uid.dat`/`session.lock`) to `ramcore_inst_<name>_<id>/`, writes an `InstanceMarker` (`ramcore-instance.json`), and loads it. `sweepStartup()` deletes leftover marked directories from a previous run.
+- `WorldInstance` (Terminable) — `closeAsync()` evacuates players, unloads, and (per `WorldInstanceOptions`) deletes the directory; bind it to a `PartyGroup`/encounter so it tears down with them.
+- `WorldBackend` — the platform seam (`supportsInstances`, `worldContainer`, `loadWorld`, `unloadWorld`, `evacuate`). `PaperWorldBackend` implements it (`Bukkit.createWorld` on the global region, `teleportAsync` evacuation); an in-memory fake makes the copy/marker/sweep logic unit-testable. `WorldInstances`/`InstanceMarker` are the file primitives.
+
+Runtime world creation is gated on `WorldBackend.supportsInstances()` — **false on Folia**, where `create` fails with an actionable message rather than corrupting state. Copy/marker/delete run on the async scheduler; load/unload hop to the global region. Stability: **Paper-experimental**.
+
+```java
+WorldInstanceService worlds = new WorldInstanceService(new PaperWorldBackend(),
+        getDataFolder().toPath().resolve("world-templates"));
+worlds.sweepStartup(); // at enable, on the async scheduler
+worlds.create("dungeon", WorldInstanceOptions.defaults())
+        .thenAccept(TaskContext.global(), instance -> party.bind(instance)); // torn down with the party
+```
+
 ## Real-Time And Cron Scheduling
 
 Package: `dev.willram.ramcore.schedule`
@@ -2960,6 +2982,7 @@ Stability: experimental.
 | `dialogue` | Branching dialogue graph, per-player sessions, and chat/menu presentation. |
 | `reload` | Content snapshot/diff and hot-reload of live template-bound objects. |
 | `schedule` | Real-time cron/interval/daily job scheduling with an in-house cron parser. |
+| `worldinstance` | Template-copied throwaway world instances with lifecycle teardown (Paper backend). |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |
