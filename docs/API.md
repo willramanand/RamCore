@@ -2600,6 +2600,39 @@ service.bindHotbar(0, ContentId.of("example", "fireball"));
 
 Thread contract: casts run on the caster's thread (trigger events and the cast timer both fire there). Stability: **experimental**.
 
+## Dialogue
+
+Package: `dev.willram.ramcore.dialogue` (config type `dialogues` via `content.spec.DialogueSpec`)
+
+A branching dialogue system: a validated node graph, per-player sessions, and chat or menu presentation. Conditions are `Predicate<DialogueContext>`; actions reuse `reward`, `menu`, and `text`.
+
+Primary types:
+
+- `Dialogue` (builder, validated: start node exists, every choice targets a real node or ends) of `DialogueNode`s. `DialogueNode` (builder) has text, choices, an availability condition, and enter actions; `availableChoices(ctx)` filters by condition.
+- `DialogueChoice(label, nextNodeId, condition, actions)` — `nextNodeId == null` ends the dialogue.
+- `DialogueContext(player, metadata)`; `DialogueConditions` (`always`, `permission`, `metadataEquals`, composable via `Predicate`); `DialogueAction` + `DialogueActions` (`message`, `playerCommand`, `reward`, `openMenu`, `custom`).
+- `DialogueRegistry` — owner-scoped over `ContentRegistry<Dialogue>`.
+- `DialogueSession` — a player's walk: `start()` enters the start node, `choose(index)` runs the choice actions and advances, ending on a null next-node or a choiceless node. Presentation is a `DialoguePresenter`: `ChatDialoguePresenter` (clickable lines via Paper `ClickEvent.callback`, no command registration) or `MenuDialoguePresenter` (chest buttons via `MenuView`). `DialogueSession.chat(player, dialogue)` / `menu(player, dialogue, title)`.
+- `Dialogues.onClick(dialogue)` / `onClickMenu(dialogue, title)` return an `NpcClickHandler` for `NpcSpec.onClick(..)`. For an objective link, add a `custom` action that fires an `ObjectiveEvent(RUN_ACTION, "dialogue:" + id)` into your tracker.
+
+Example:
+
+```java
+Dialogue quest = Dialogue.builder(ContentId.of("example", "guard"))
+        .node(DialogueNode.builder("root", "<yellow>Halt! What do you want?")
+                .choice(DialogueChoice.of("Trade", "trade"))
+                .choice(DialogueChoice.of("Nothing", null))
+                .build())
+        .node(DialogueNode.builder("trade", "<green>Very well.")
+                .action(DialogueActions.playerCommand("trade guard"))
+                .build())
+        .build();
+
+npcSpec.onClick(Dialogues.onClick(quest));
+```
+
+Config dialogues (`dialogues` type) cover node text, choices, `permission` conditions, and `messages`/`commands` actions; reward/menu/custom actions are code-supplied via the builder. Runs on the player's thread. Stability: **experimental**.
+
 ## Attribute And Combat Helpers
 
 Package: `dev.willram.ramcore.combat`
@@ -2879,6 +2912,7 @@ Stability: experimental.
 | `selector` | Reusable collection-based player and entity selectors. |
 | `stat` | Custom stat definitions, per-player modifier sources, cached snapshots, and the item stat map. |
 | `ability` | Ability definitions, per-player caster state machine, triggers, and channel/interrupt/combo extensions. |
+| `dialogue` | Branching dialogue graph, per-player sessions, and chat/menu presentation. |
 | `promise` | Thread-aware promise/future abstraction. |
 | `event` | Functional Bukkit and ProtocolLib event subscriptions. |
 | `terminable` | Resource lifecycle and cleanup ownership. |
