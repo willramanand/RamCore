@@ -7,7 +7,7 @@ val junitVersion = "5.11.4"
 
 allprojects {
     group = "dev.willram"
-    version = "2.0.0"
+    version = "2.0.1"
 }
 
 subprojects {

@@ -85,3 +85,22 @@ Not allowed in public APIs:
 - Parking the global tick thread from another thread (`ServerThreadLock` is deprecated and refuses to run on Folia).
 - `Promise` continuations that touch an entity or block using the `Sync` variants; use the `TaskContext` overloads so the step runs on the owner.
 - Optional plugin classes in core method signatures unless the package is explicitly an integration boundary.
+
+## Public ABI dependencies must not be relocated (RC1, RamCore 2.0.1)
+
+`ramcore-api` declares configurate-core, configurate-hocon, configurate-yaml, typesafe `config`, and
+flow-math as `api(...)` dependencies (`ramcore-api/build.gradle.kts`), and exposes their types in
+public signatures — `ConfigurationNode` (`ContentDeserializer.deserialize`, `ContentDefinition.node`,
+`RewardActionFactory.create`), `Vector3d` (`serialize/Position`), and `VariableAmount`/`GenericMath`
+(`random`). snakeyaml arrives transitively through configurate-yaml and backs its YAML loader.
+
+These are therefore part of RamCore's **public ABI** and **must never be relocated** in
+`ramcore-paper`'s shadow jar. A consumer plugin compiled against `ramcore-api` emits the original,
+un-relocated class names; a shipped jar that relocated them (e.g. to `dev.willram.ramcore.libs.*`)
+would only contain the relocated names, and the consumer would fail at runtime with
+`NoClassDefFoundError: org/spongepowered/configurate/ConfigurationNode`.
+
+Only genuinely internal libraries stay relocated in `ramcore-paper`: `kotlinx.coroutines` and
+`org.bstats`. The long-term alternative — a Paper `PluginLoader` with a `libraries:` block (ADR-0003)
+so the server resolves these at runtime instead of shading them — is not implemented; until it is,
+shipping them un-relocated is the contract.

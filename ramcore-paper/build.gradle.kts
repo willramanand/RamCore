@@ -66,10 +66,11 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
         )
     }
 
-    relocate("org.spongepowered.configurate", "dev.willram.ramcore.libs.configurate")
-    relocate("com.typesafe.config", "dev.willram.ramcore.libs.typesafe.config")
-    relocate("com.flowpowered.math", "dev.willram.ramcore.libs.flowpowered.math")
-    relocate("org.yaml.snakeyaml", "dev.willram.ramcore.libs.snakeyaml")
+    // configurate, typesafe-config, flow-math and snakeyaml (transitive via configurate-yaml) are
+    // part of ramcore-api's public ABI (declared api(...) and exposed in ConfigurationNode/Vector3d
+    // signatures), so they must NOT be relocated: a consumer plugin compiled against ramcore-api
+    // emits the un-relocated names and would hit NoClassDefFoundError against a relocated jar.
+    // See docs/MODULE_BOUNDARIES.md. Only non-API internals stay relocated.
     relocate("kotlinx.coroutines", "dev.willram.ramcore.libs.kotlinx.coroutines")
     relocate("org.bstats", "dev.willram.ramcore.libs.bstats")
 
